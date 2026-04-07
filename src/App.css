@@ -1,0 +1,32 @@
+.banner-card {
+  position: relative;
+  padding: 20px 10px 30px;
+  text-align: center;
+  color: white;
+  font-weight: bold;
+  border-radius: 8px 8px 0 0;
+  margin-bottom: 25px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+}
+
+.banner-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.6);
+  z-index: 10;
+}
+
+/* Para que herede el color */
+.banner-card.fire::after {
+  border-top-color: #f08030;
+}
+
+.banner-card.water::after {
+  border-top-color: #6890f0;
+}
+
+.banner-card.grass::after {
+  border-top-color: #78c850;
+}
+
+/* Puedes agregar más tipos si quieres */

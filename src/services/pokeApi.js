@@ -1,19 +1,15 @@
 export const getPokemons = async () => {
-    const res = await fetch("https://pokeapi.co/api/v2/pokemon?limit=500");
+    const res = await fetch("https://pokeapi.co/api/v2/pokemon?limit=1025");
     const data = await res.json();
 
-    const detailed = await Promise.all(
-        data.results.map(async (pokemon, index) => {
-            const res = await fetch(pokemon.url);
-            const pokeData = await res.json();
+    return data.results.map((pokemon) => {
+        const urlParts = pokemon.url.split("/").filter(Boolean);
+        const id = Number(urlParts[urlParts.length - 1]);
 
-            return {
-                name: pokemon.name,
-                id: index + 1,
-                type: pokeData.types[0].type.name,
-            };
-        })
-    );
-
-    return detailed;
+        return {
+            name: pokemon.name,
+            id: id,
+            type: "normal"
+        };
+    });
 };

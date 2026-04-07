@@ -3,6 +3,11 @@ import { getPokemons } from "./services/pokeApi";
 import jsPDF from "jspdf";
 import "./App.css";
 
+// 🧩 COMPONENTES
+import PokemonGrid from "./components/PokemonGrid";
+import Pagination from "./components/Pagination";
+import SelectedPanel from "./components/SelectedPanel";
+
 function App() {
   const [pokemons, setPokemons] = useState([]);
   const [selected, setSelected] = useState([]);
@@ -11,6 +16,21 @@ function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [gridSize, setGridSize] = useState(16);
   const [isListMinimized, setIsListMinimized] = useState(false);
+
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+
+  const [typesMap, setTypesMap] = useState({});
+
+  const fetchType = async (id) => {
+    if (typesMap[id]) return;
+
+    const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+    const data = await res.json();
+
+    const type = data.types[0].type.name;
+
+    setTypesMap(prev => ({ ...prev, [id]: type }));
+  };
 
   const typeColors = {
     fire: "#f08030",
@@ -33,6 +53,7 @@ function App() {
     steel: "#b8b8d0",
   };
 
+  // 🔄 Cargar datos + localStorage
   useEffect(() => {
     const fetchData = async () => {
       const data = await getPokemons();
@@ -51,6 +72,7 @@ function App() {
     localStorage.setItem("selectedPokemons", JSON.stringify(selected));
   }, [selected]);
 
+  // 🧠 Selección
   const toggleSelect = (pokemon) => {
     const exists = selected.find((p) => p.name === pokemon.name);
 
@@ -61,70 +83,96 @@ function App() {
     }
   };
 
+  // 📄 PDF
   const generatePDF = async () => {
-    const doc = new jsPDF();
+    setIsGeneratingPDF(true);
 
-    let x = 10;
-    let y = 10;
+    try {
+      const doc = new jsPDF();
 
-    for (let i = 0; i < selected.length; i++) {
-      const poke = selected[i];
+      const cardWidth = 45;
+      const cardHeight = 55;
 
-      const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${poke.id}.png`;
+      let x = 10;
+      let y = 10;
 
-      const img = await fetch(imageUrl)
-        .then((res) => res.blob())
-        .then(
-          (blob) =>
-            new Promise((resolve) => {
-              const reader = new FileReader();
-              reader.onload = () => resolve(reader.result);
-              reader.readAsDataURL(blob);
-            })
-        );
+      for (let i = 0; i < selected.length; i++) {
+        const poke = selected[i];
 
-      doc.rect(x, y, 45, 45); // Caja sin relleno más compacta
-      doc.setFontSize(9);
-      doc.text(`#${poke.id}`, x + 3, y + 6);
+        const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${poke.id}.png`;
 
-      // Imágen en medio
-      doc.addImage(img, "PNG", x + 10, y + 8, 25, 25);
+        const img = await fetch(imageUrl)
+          .then(res => res.blob())
+          .then(blob => new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          }));
 
-      const displayName = poke.name.split("-")[0];
-      const capName = displayName.charAt(0).toUpperCase() + displayName.slice(1);
-      doc.setFontSize(10);
-      doc.text(capName, x + 22.5, y + 40, { align: "center" });
+        // 🟨 Fondo carta
+        doc.setFillColor(245, 245, 245);
+        doc.rect(x, y, cardWidth, cardHeight, "F");
 
-      x += 50; // Nos movemos 50 a la derecha
+        // 🖤 Borde
+        doc.setDrawColor(0);
+        doc.rect(x, y, cardWidth, cardHeight);
 
-      if (x > 160) {
-        x = 10;
-        y += 50; // Siguiente fila
-        
-        // Si alcanzamos el final de la página (aprox 297mm en A4 estándar), creamos una nueva
-        if (y > 250) {
-          doc.addPage();
-          y = 10;
+        // 🔢 ID
+        doc.setFontSize(8);
+        doc.setTextColor(80);
+        doc.text(`#${poke.id}`, x + 2, y + 5);
+
+        // 🧾 Nombre
+        const name = poke.name.split("-")[0];
+        const capName = name.charAt(0).toUpperCase() + name.slice(1);
+
+        doc.setFontSize(13);
+        doc.setTextColor(0);
+        doc.text(capName, x + cardWidth / 2, y + 12, { align: "center" });
+
+        // 🖼️ Imagen (mejor centrada)
+        doc.addImage(img, "PNG", x + 5, y + 15, 35, 30);
+
+
+        // 🔄 Posición siguiente carta
+        x += 50;
+
+        if (x > 160) {
+          x = 10;
+          y += 65;
+
+          if (y > 250) {
+            doc.addPage();
+            y = 10;
+          }
         }
       }
-    }
 
-    doc.save("pokemon-checklist.pdf");
+      doc.save("pokemon-cards.pdf");
+
+    } finally {
+      setIsGeneratingPDF(false);
+    }
   };
 
-  // 🔍 filtro
-  // 🔍 filtro
+  // 🔍 FILTRO (multi búsqueda)
   const filteredPokemons = pokemons.filter((p) => {
-    const terms = search.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean);
+    const terms = search
+      .split(",")
+      .map((t) => t.trim().toLowerCase())
+      .filter(Boolean);
+
     if (terms.length === 0) return true;
 
-    return terms.some((term) =>
-      p.id.toString() === term || p.name.toLowerCase().includes(term)
+    return terms.some(
+      (term) =>
+        p.id.toString() === term ||
+        p.name.toLowerCase().includes(term)
     );
   });
 
-  // 📄 paginación
-  const itemsPerPage = gridSize * 2; // 2 páginas por vista (libro)
+  // 📖 PAGINACIÓN TIPO LIBRO
+  const itemsPerPage = gridSize * 2;
   const totalPages = Math.ceil(filteredPokemons.length / itemsPerPage);
 
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -136,66 +184,43 @@ function App() {
   const leftPagePokemons = currentSpread.slice(0, gridSize);
   const rightPagePokemons = currentSpread.slice(gridSize, itemsPerPage);
 
-  const renderCard = (poke, index) => {
-    const image = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${poke.id}.png`;
-    const isSelected = selected.some((p) => p.name === poke.name);
-    const colClass = gridSize === 9 ? "col-4" : "col-3"; // 3x3 o 4x4
+  // ⏳ Loading simple
+  if (!pokemons.length) {
+    return <p className="text-center mt-5">Cargando Pokémon...</p>;
+  }
 
-    // Obtener el nombre base del pokemon quitando cualquier sufijo después del guión '-'
-    const displayName = poke.name.split("-")[0];
+  const getColorById = (id) => {
+    const colors = [
+      "#f08030", // rojo
+      "#6890f0", // azul
+      "#78c850", // verde
+      "#f8d030", // amarillo
+      "#a040a0", // morado
+      "#705848", // café
+    ];
 
-    return (
-      <div className={colClass} key={poke.name || index}>
-        <div
-          className={`banner-card h-100 d-flex flex-column align-items-center justify-content-center`}
-          style={{
-            backgroundColor: typeColors[poke.type] || "gray",
-            cursor: "pointer",
-            border: isSelected ? "3px solid white" : "none"
-          }}
-          onClick={() => toggleSelect(poke)}
-          title={poke.name} /* el tooltip aún muestra el nombre completo técnico */
-        >
-          <span style={{ position: "absolute", top: "5px", left: "8px", fontSize: "0.75rem", fontWeight: "bold", opacity: 0.85 }}>
-            #{poke.id}
-          </span>
-          <img
-            src={image}
-            style={{
-              width: "100%",
-              minWidth: "85px",
-              maxWidth: "85px",
-              minHeight: "85px",
-              objectFit: "contain",
-              imageRendering: "pixelated"
-            }}
-            alt={displayName}
-          />
-          <div className="text-capitalize text-truncate w-100 mt-0" style={{ fontSize: "0.80rem" }}>
-            {displayName}
-          </div>
-        </div>
-      </div>
-    );
+    return colors[id % colors.length];
   };
 
   return (
-    <div className="container mt-4">
-      <h1 className="fw-bold mb-2" style={{ background: "linear-gradient(45deg, #FFD700, #FF8C00)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+
+    <div className="container mt-0 pb-5" style={{ paddingBottom: "120px" }}>      {/* 🧠 Header */}
+      <h1 className="fw-bold mb-2 text-warning">
         Poke Búsqueda
       </h1>
 
-      <p className="text-secondary mb-4" style={{ maxWidth: "800px" }}>
-        Bienvenido a Poke Búsqueda. Aquí puedes armar tu propia colección. Busca Pokémon por su nombre o ingresando múltiples identificadores separados por comas (por ejemplo: <code>1, 4, 7, pikachu</code>). Selecciona tus favoritos haciendo clic en sus cartas para finalmente generar un PDF interactivo.
-      </p>
-
-      <h5 className="mb-4">Seleccionados: <span className="badge bg-primary rounded-pill">{selected.length}</span></h5>
+      <h5 className="mb-3">
+        Seleccionados:{" "}
+        <span className="badge bg-primary">
+          {selected.length}
+        </span>
+      </h5>
 
       {/* 🔍 Buscador */}
       <input
         type="text"
         className="form-control mb-3"
-        placeholder="Buscar Pokémon..."
+        placeholder="Ej: 1, 4, pikachu"
         value={search}
         onChange={(e) => {
           setSearch(e.target.value);
@@ -226,90 +251,60 @@ function App() {
         </button>
       </div>
 
-      {/* 🧩 GRID TIPO LIBRO */}
-      <div className="row mt-4 mb-5">
-        {/* Lado Izquierdo */}
-        <div className="col-12 col-xl-6 mb-4 pe-xl-4 border-xl-end">
-          <div className="row g-2">
-            {leftPagePokemons.map(renderCard)}
-          </div>
+      {/* 📖 GRID TIPO LIBRO */}
+      <div className="row mt-0 mb-0">
+        <div className="col-12 col-xl-6 mb-0 pe-xl-4 border-xl-end">
+          <PokemonGrid
+            pokemons={leftPagePokemons}
+            selected={selected}
+            toggleSelect={toggleSelect}
+            typeColors={typeColors}
+            gridSize={gridSize}
+            fetchType={fetchType}
+            typesMap={typesMap}
+          />
         </div>
 
-        {/* Lado Derecho */}
         <div className="col-12 col-xl-6 mb-4 ps-xl-4">
-          <div className="row g-2">
-            {rightPagePokemons.map(renderCard)}
-          </div>
+          <PokemonGrid
+            pokemons={rightPagePokemons}
+            selected={selected}
+            toggleSelect={toggleSelect}
+            typeColors={typeColors}
+            gridSize={gridSize}
+            fetchType={fetchType}
+            typesMap={typesMap}
+          />
         </div>
       </div>
+      {/* 📄 Paginación */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        setCurrentPage={setCurrentPage}
+      />
 
-      {/* 📄 PAGINACIÓN */}
-      <div className="d-flex justify-content-center mt-4 gap-2">
-        <button
-          className="btn btn-secondary"
-          disabled={currentPage === 1}
-          onClick={() => setCurrentPage(currentPage - 1)}
-        >
-          ←
-        </button>
+      {/* 📦 Panel flotante */}
+      <SelectedPanel
+        selected={selected}
+        toggleSelect={toggleSelect}
+        generatePDF={generatePDF}
+        isListMinimized={isListMinimized}
+        setIsListMinimized={setIsListMinimized}
+      />
 
-        <span className="align-self-center">
-          Página {currentPage} de {totalPages}
-        </span>
-
-        <button
-          className="btn btn-secondary"
-          disabled={currentPage === totalPages}
-          onClick={() => setCurrentPage(currentPage + 1)}
-        >
-          →
-        </button>
-      </div>
-
-      {/* 📦 Seleccionados Superpuesto */}
-      {selected.length > 0 && (
+      {isGeneratingPDF && (
         <div
-          className="position-fixed bottom-0 end-0 p-3"
-          style={{ zIndex: 1050, maxWidth: "300px", opacity: 0.85, transition: "opacity 0.2s" }}
-          onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
-          onMouseLeave={(e) => e.currentTarget.style.opacity = 0.85}
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-dark bg-opacity-50"
+          style={{ zIndex: 2000 }}
         >
-          <div className="card shadow-lg bg-dark text-light border-secondary p-3">
-            <div className="d-flex justify-content-between align-items-center border-bottom pb-2 border-secondary">
-              <h6 className="mb-0">Seleccionados ({selected.length})</h6>
-              <button
-                className="btn btn-sm btn-outline-light border-0 py-0"
-                onClick={() => setIsListMinimized(!isListMinimized)}
-                title={isListMinimized ? "Expandir" : "Minimizar"}
-              >
-                {isListMinimized ? '▲' : '▼'}
-              </button>
-            </div>
-
-            {!isListMinimized && (
-              <>
-                <div className="d-flex flex-wrap gap-1 mt-3 mb-3" style={{ maxHeight: "200px", overflowY: "auto" }}>
-                  {selected.map((poke, index) => (
-                    <span
-                      key={index}
-                      className="badge bg-secondary text-capitalize"
-                      style={{ cursor: "pointer" }}
-                      title={`Clic para remover a ${poke.name.split("-")[0]}`}
-                      onClick={() => toggleSelect(poke)}
-                    >
-                      {poke.name.split("-")[0]} &times;
-                    </span>
-                  ))}
-                </div>
-
-                <button className="btn btn-success fw-bold w-100" onClick={generatePDF}>
-                  Generar PDF
-                </button>
-              </>
-            )}
+          <div className="bg-white p-4 rounded shadow text-center">
+            <div className="spinner-border mb-3"></div>
+            <p>Generando PDF...</p>
           </div>
         </div>
       )}
+
     </div>
   );
 }

@@ -1,4 +1,12 @@
 function SelectedPanel({ selected, toggleSelect, generatePDF, isListMinimized, setIsListMinimized }) {
+
+    const formatName = (name) => {
+        return name
+            .split("-")
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ");
+    };
+
     if (selected.length === 0) return null;
 
     return (
@@ -25,7 +33,7 @@ function SelectedPanel({ selected, toggleSelect, generatePDF, isListMinimized, s
                                     style={{ cursor: "pointer" }}
                                     onClick={() => toggleSelect(poke)}
                                 >
-                                    {poke.name.split("-")[0]} ×
+                                    {formatName(poke.name)}
                                 </span>
                             ))}
                         </div>

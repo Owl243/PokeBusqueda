@@ -4,8 +4,15 @@ function PokemonCard({ poke, isSelected, toggleSelect, gridSize, fetchType, type
     const image = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${poke.id}.png`;
     const colClass = gridSize === 9 ? "col-4" : "col-3";
 
-    const displayName = poke.name.split("-")[0];
 
+    const formatName = (name) => {
+        return name
+            .split("-")
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ");
+    };
+
+    const displayName = formatName(poke.name);
     useEffect(() => {
         fetchType(poke.id);
     }, [poke.id, fetchType]);

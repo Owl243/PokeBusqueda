@@ -4,7 +4,7 @@ import PokemonCard from "./PokemonCard";
 
 function PokemonGrid({ pokemons, selected, toggleSelect, typeColors, gridSize, fetchType, typesMap }) {
     return (
-        <div className="row g-2">
+        <div className="row g-2 p-1">
             {pokemons.map((poke, index) => {
                 const isSelected = selected.some((p) => p.name === poke.name);
 

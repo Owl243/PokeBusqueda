@@ -83,6 +83,13 @@ function App() {
     }
   };
 
+  const formatName = (name) => {
+    return name
+      .split("-")
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
+
   // 📄 PDF
   const generatePDF = async () => {
     setIsGeneratingPDF(true);
@@ -123,9 +130,7 @@ function App() {
         doc.text(`#${poke.id}`, x + 2, y + 5);
 
         // 🧾 Nombre
-        const name = poke.name.split("-")[0];
-        const capName = name.charAt(0).toUpperCase() + name.slice(1);
-
+        const capName = formatName(poke.name);
         doc.setFontSize(13);
         doc.setTextColor(0);
         doc.text(capName, x + cardWidth / 2, y + 12, { align: "center" });

@@ -152,8 +152,13 @@ function App() {
           }
         }
       }
-
       doc.save("pokemon-cards.pdf");
+
+      // 🧹 limpiar selección
+      setSelected([]);
+
+      // opcional (extra seguro)
+      localStorage.removeItem("selectedPokemons");
 
     } finally {
       setIsGeneratingPDF(false);

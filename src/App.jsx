@@ -393,14 +393,16 @@ function App() {
           Incluye soporte para Mega Evoluciones y su integración directa con Cartas TCG.
           Configura ambas listas a tu gusto y expórtalas rápidamente a documentos PDF de alta calidad listos para imprimir.
         </p>
-        <a
-          href="https://paypal.me/Iaannwn"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn btn-outline-info rounded-pill px-4 fw-bold mt-2"
-        >
-          ☕ ¿Te sirve esta página? ¡Apóyame con un café vía PayPal!
-        </a>
+        <div className="d-flex justify-content-center mt-2">
+          <a
+            href="https://ko-fi.com/iaanalvarez"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-outline-danger rounded-pill px-4 fw-bold"
+          >
+            ☕ ¿Te gusta el proyecto? Invítame a un café en Ko-fi
+          </a>
+        </div>
 
         {/* 📚 Instrucciones Rápidas */}
         <div className="alert alert-dark border-secondary mt-4 mx-auto text-start shadow-sm" style={{ maxWidth: "750px" }}>
@@ -551,13 +553,13 @@ function App() {
             </p>
             <div className="d-flex flex-column gap-2 mt-4">
               <a
-                href="https://paypal.me/Iaannwn"
+                href="https://ko-fi.com/iaanalvarez"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-warning fw-bold text-dark fs-6 py-2"
+                className="btn btn-danger fw-bold text-light fs-6 py-2"
                 onClick={() => setShowDonationAlert(false)}
               >
-                💛 Apoyar proyecto con PayPal
+                ❤️ Apoyar desarrollo en Ko-fi (PayPal/Card)
               </a>
               <button
                 className="btn btn-outline-secondary py-2 border-0"

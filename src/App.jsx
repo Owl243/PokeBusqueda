@@ -21,6 +21,9 @@ function App() {
 
   const [typesMap, setTypesMap] = useState({});
 
+  const [showMegas, setShowMegas] = useState(false);
+
+
   const fetchType = async (id) => {
     if (typesMap[id]) return;
 
@@ -166,20 +169,31 @@ function App() {
   };
 
   // 🔍 FILTRO (multi búsqueda)
-  const filteredPokemons = pokemons.filter((p) => {
+  const filteredPokemons = (() => {
+    let filtered = pokemons;
+
+    // 🧬 filtro megas
+    if (showMegas) {
+      filtered = filtered.filter(p => p.name.startsWith("mega-"));
+    }
+
+    // 🔍 búsqueda
     const terms = search
       .split(",")
-      .map((t) => t.trim().toLowerCase())
+      .map(t => t.trim().toLowerCase())
       .filter(Boolean);
 
-    if (terms.length === 0) return true;
+    if (terms.length > 0) {
+      filtered = filtered.filter(p =>
+        terms.some(term =>
+          p.id.toString() === term ||
+          p.name.toLowerCase().includes(term)
+        )
+      );
+    }
 
-    return terms.some(
-      (term) =>
-        p.id.toString() === term ||
-        p.name.toLowerCase().includes(term)
-    );
-  });
+    return filtered;
+  })();
 
   // 📖 PAGINACIÓN TIPO LIBRO
   const itemsPerPage = gridSize * 2;
@@ -219,12 +233,6 @@ function App() {
         Poke Búsqueda
       </h1>
 
-      <h5 className="mb-3">
-        Seleccionados:{" "}
-        <span className="badge bg-primary">
-          {selected.length}
-        </span>
-      </h5>
 
       {/* 🔍 Buscador */}
       <input
@@ -258,6 +266,12 @@ function App() {
           }}
         >
           4x4
+        </button>
+        <button
+          className="btn btn-outline-warning"
+          onClick={() => setShowMegas(!showMegas)}
+        >
+          {showMegas ? "Ver todos" : "Solo Megas"}
         </button>
       </div>
 

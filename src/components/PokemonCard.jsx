@@ -1,7 +1,13 @@
 import { useEffect } from "react";
 
 function PokemonCard({ poke, isSelected, toggleSelect, gridSize, fetchType, typesMap, typeColors }) {
-    const image = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${poke.id}.png`;
+    const getImage = (id) => {
+        return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
+    };
+
+    const image = poke.id > 20000
+        ? "/placeholder.png"
+        : `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${poke.id}.png`;
     const colClass = gridSize === 9 ? "col-4" : "col-3";
 
 
@@ -33,12 +39,14 @@ function PokemonCard({ poke, isSelected, toggleSelect, gridSize, fetchType, type
                 </span>
 
                 <img
-                    src={image}
+                    src={getImage(poke.id)}
+                    onError={(e) => {
+                        e.target.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${poke.id}.png`;
+                    }}
                     style={{
                         width: "85px",
                         height: "85px",
-                        objectFit: "contain",
-                        imageRendering: "pixelated"
+                        objectFit: "contain"
                     }}
                     alt={displayName}
                 />

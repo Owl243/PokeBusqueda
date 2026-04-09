@@ -60,6 +60,7 @@ function App() {
   const [isListMinimized, setIsListMinimized] = useState(false);
 
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [showDonationAlert, setShowDonationAlert] = useState(false);
 
   const [typesMap, setTypesMap] = useState({});
 
@@ -70,21 +71,21 @@ function App() {
   const fetchType = useCallback(async (poke) => {
     setTypesMap((prev) => {
       if (prev[poke.id]) return prev;
-      
+
       let fetchUrl = `https://pokeapi.co/api/v2/pokemon/${poke.id}`;
       // Las megas falsas ZA (ID > 20000) fallan por ID, buscar por nombre base
       if (poke.id > 20000) {
         const baseName = poke.name.replace("mega-", "").split("-")[0];
         fetchUrl = `https://pokeapi.co/api/v2/pokemon/${baseName}`;
       }
-      
+
       fetch(fetchUrl)
         .then(res => res.json())
         .then(data => {
-            const type = data.types[0].type.name;
-            setTypesMap(p => ({ ...p, [poke.id]: type }));
-        }).catch(() => {});
-        
+          const type = data.types[0].type.name;
+          setTypesMap(p => ({ ...p, [poke.id]: type }));
+        }).catch(() => { });
+
       return { ...prev, [poke.id]: 'fetching' };
     });
   }, []);
@@ -100,7 +101,7 @@ function App() {
     if (saved) {
       setSelected(JSON.parse(saved));
     }
-    
+
     const savedTcg = localStorage.getItem("selectedTcg");
     if (savedTcg) {
       setSelectedTcg(JSON.parse(savedTcg));
@@ -159,11 +160,11 @@ function App() {
         let displayId = poke.id;
         // Si no tiene imagen propia (Megas fakes ZA con ID altas), usamos la imagen del base
         if (poke.id > 20000) {
-           let baseName = poke.name.replace("mega-", "").replace("-mega", "").split("-")[0];
-           const basePoke = pokemons.find(p => p.name === baseName);
-           if (basePoke) {
-              displayId = basePoke.id;
-           }
+          let baseName = poke.name.replace("mega-", "").replace("-mega", "").split("-")[0];
+          const basePoke = pokemons.find(p => p.name === baseName);
+          if (basePoke) {
+            displayId = basePoke.id;
+          }
         }
 
         const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${displayId}.png`;
@@ -189,21 +190,21 @@ function App() {
 
         // 🖼️ Imagen con resiliencia a crashes (404 Not Found)
         try {
-            const res = await fetch(imageUrl);
-            if (!res.ok) throw new Error("Image not found");
-            const blob = await res.blob();
-            const imgData = await new Promise(resolve => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.readAsDataURL(blob);
-            });
-            doc.addImage(imgData, "PNG", x + 5, y + 15, 35, 30);
+          const res = await fetch(imageUrl);
+          if (!res.ok) throw new Error("Image not found");
+          const blob = await res.blob();
+          const imgData = await new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+          doc.addImage(imgData, "PNG", x + 5, y + 15, 35, 30);
         } catch (error) {
-            doc.setFillColor(200, 200, 200);
-            doc.rect(x + 5, y + 15, 35, 30, "F");
-            doc.setFontSize(8);
-            doc.setTextColor(100);
-            doc.text("Sin Foto", x + cardWidth / 2, y + 30, { align: "center" });
+          doc.setFillColor(200, 200, 200);
+          doc.rect(x + 5, y + 15, 35, 30, "F");
+          doc.setFontSize(8);
+          doc.setTextColor(100);
+          doc.text("Sin Foto", x + cardWidth / 2, y + 30, { align: "center" });
         }
 
 
@@ -230,6 +231,7 @@ function App() {
 
     } finally {
       setIsGeneratingPDF(false);
+      setShowDonationAlert(true);
     }
   };
 
@@ -242,7 +244,7 @@ function App() {
       const doc = new jsPDF();
       let x = 10;
       let y = 10;
-      
+
       // Tamaño más pequeño para caber 16 (4x4) en A4
       const cardWidth = 42;
       const cardHeight = 58;
@@ -252,7 +254,7 @@ function App() {
       // Cargar todas las imágenes en paralelo usando WSRV para evitar CORS y 522
       const imagesData = await Promise.all(
         selectedTcg.map(async (card) => {
-          const imageUrl = card.images.small; 
+          const imageUrl = card.images.small;
           // wsrv.nl actúa como un CDN caché y proxy de imágenes muy rápido, y entrega las cabeceras CORS de forma segura
           const proxyUrl = `https://wsrv.nl/?url=${encodeURIComponent(imageUrl)}&output=png`;
           const res = await fetch(proxyUrl);
@@ -301,13 +303,14 @@ function App() {
       alert("Error al generar PDF de TCG");
     } finally {
       setIsGeneratingPDF(false);
+      setShowDonationAlert(true);
     }
   };
 
   // 🔍 FILTRO (multi búsqueda)
   const filteredPokemons = useMemo(() => {
     let filtered = pokemons;
-    
+
     // Identificar el rango de la generación seleccionada
     const gen = generations.find(g => g.id === selectedGen);
 
@@ -320,22 +323,22 @@ function App() {
 
     // Filtrar por generación
     if (gen) {
-        filtered = filtered.filter(p => {
-             // Si es normal, validamos su ID directamente
-             if (p.id <= 10000) {
-                 return p.id >= gen.start && p.id <= gen.end;
-             } else {
-                 // Si es Mega, obtenemos el nombre base y buscamos el ID base
-                 let baseName = p.name.replace("mega-", "").replace("-mega", "").split("-")[0];
-                 const basePoke = pokemons.find(bp => bp.name === baseName && bp.id <= 10000);
-                 if (basePoke) {
-                     return basePoke.id >= gen.start && basePoke.id <= gen.end;
-                 }
-                 // Excepciones donde base no aplica perfecto (ej. "mega-mewtwo-x", base="mewtwo")
-                 // "mewtwo" se detectará bien gracias a .split("-")[0].
-                 return false;
-             }
-        });
+      filtered = filtered.filter(p => {
+        // Si es normal, validamos su ID directamente
+        if (p.id <= 10000) {
+          return p.id >= gen.start && p.id <= gen.end;
+        } else {
+          // Si es Mega, obtenemos el nombre base y buscamos el ID base
+          let baseName = p.name.replace("mega-", "").replace("-mega", "").split("-")[0];
+          const basePoke = pokemons.find(bp => bp.name === baseName && bp.id <= 10000);
+          if (basePoke) {
+            return basePoke.id >= gen.start && basePoke.id <= gen.end;
+          }
+          // Excepciones donde base no aplica perfecto (ej. "mega-mewtwo-x", base="mewtwo")
+          // "mewtwo" se detectará bien gracias a .split("-")[0].
+          return false;
+        }
+      });
     }
 
     // 🔍 búsqueda
@@ -385,11 +388,32 @@ function App() {
         <h1 className="display-4 fw-bold text-warning mb-3" style={{ textShadow: "2px 2px 4px rgba(0,0,0,0.8)" }}>
           🌟 Poké Búsqueda
         </h1>
-        <p className="lead text-light mb-0" style={{ maxWidth: "750px", margin: "0 auto" }}>
-          Busca, filtra y selecciona tus Pokémon favoritos de diversas generaciones. 
-          Incluye soporte para Mega Evoluciones y su integración directa con Cartas TCG. 
+        <p className="lead text-light mb-4" style={{ maxWidth: "750px", margin: "0 auto" }}>
+          Busca, filtra y selecciona tus Pokémon favoritos de diversas generaciones.
+          Incluye soporte para Mega Evoluciones y su integración directa con Cartas TCG.
           Configura ambas listas a tu gusto y expórtalas rápidamente a documentos PDF de alta calidad listos para imprimir.
         </p>
+        <a
+          href="https://paypal.me/Iaannwn"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn-outline-info rounded-pill px-4 fw-bold mt-2"
+        >
+          ☕ ¿Te sirve esta página? ¡Apóyame con un café vía PayPal!
+        </a>
+
+        {/* 📚 Instrucciones Rápidas */}
+        <div className="alert alert-dark border-secondary mt-4 mx-auto text-start shadow-sm" style={{ maxWidth: "750px" }}>
+          <h6 className="alert-heading text-warning fw-bold mb-2">💡 ¿Cómo se usa?</h6>
+          <ul className="mb-0 text-light" style={{ fontSize: "0.9rem" }}>
+            <li className="mb-1">
+              <strong>PDF de Pokédex:</strong> Haz clic sobre cualquier recuadro de Pokémon para seleccionarlo (aparecerá un borde blanco). Estos se guardarán en tu Panel Flotante inferior para exportar tu Lista Principal.
+            </li>
+            <li>
+              <strong>PDF de Cartas TCG:</strong> Haz clic en el botón 🎴 (en la esquina de cada carta) para ver las cartas físicas de ese Pokémon. Clica tus favoritas y expórtalas en su propio PDF en cuadrículas de 16 por hoja.
+            </li>
+          </ul>
+        </div>
       </div>
 
 
@@ -407,15 +431,9 @@ function App() {
 
       {/* 🎛️ Grid selector y Generación */}
       <div className="mb-3 d-flex flex-wrap gap-2 align-items-center">
-        <select 
-          className="form-select w-auto d-inline-block bg-dark text-light border-secondary" 
-          value={selectedGen} 
-          disabled={!search.toLowerCase().includes("litwick")}
-          title={!search.toLowerCase().includes("litwick") ? "Parece bloqueado... Busca la pequeña luz en la oscuridad." : "¡Secreto revelado!"}
-          style={{
-            cursor: !search.toLowerCase().includes("litwick") ? "not-allowed" : "pointer",
-            opacity: !search.toLowerCase().includes("litwick") ? 0.6 : 1
-          }}
+        <select
+          className="form-select w-auto d-inline-block bg-dark text-light border-secondary"
+          value={selectedGen}
           onChange={(e) => {
             setSelectedGen(Number(e.target.value));
             setCurrentPage(1);
@@ -510,17 +528,52 @@ function App() {
           className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-dark bg-opacity-50"
           style={{ zIndex: 2000 }}
         >
-          <div className="bg-white p-4 rounded shadow text-center">
-            <div className="spinner-border mb-3"></div>
-            <p>Generando PDF...</p>
+          <div className="bg-white p-4 rounded shadow text-center text-dark">
+            <div className="spinner-border mb-3 border-warning"></div>
+            <p className="fw-bold">Generando PDF de la lista...</p>
+          </div>
+        </div>
+      )}
+
+      {/* 💸 Modal de Agradecimiento / Donación Post-Descarga */}
+      {showDonationAlert && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-dark bg-opacity-75"
+          style={{ zIndex: 3000 }}
+        >
+          <div className="bg-dark border border-warning text-light p-4 rounded shadow-lg text-center" style={{ maxWidth: "450px" }}>
+            <h3 className="text-warning mb-3">✅ ¡PDF Generado!</h3>
+            <p className="mb-3" style={{ fontSize: "0.95rem" }}>
+              Tu archivo PDF se está descargando ahora mismo en tu dispositivo de forma exitosa.
+            </p>
+            <p className="mb-4 text-secondary" style={{ fontSize: "0.85rem" }}>
+              Este proyecto sigue en constante desarrollo. Crear esta herramienta y mantenerla libre de publicidad requiere horas de esfuerzo. ¡Tus donaciones me ayudan directamente a seguir mejorando funciones y agregando novedades! ☕
+            </p>
+            <div className="d-flex flex-column gap-2 mt-4">
+              <a
+                href="https://paypal.me/Iaannwn"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-warning fw-bold text-dark fs-6 py-2"
+                onClick={() => setShowDonationAlert(false)}
+              >
+                💛 Apoyar proyecto con PayPal
+              </a>
+              <button
+                className="btn btn-outline-secondary py-2 border-0"
+                onClick={() => setShowDonationAlert(false)}
+              >
+                Cerrar y continuar buscando
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {tcgPokemon && (
-        <TcgModal 
-          pokemon={tcgPokemon} 
-          onClose={() => setTcgPokemon(null)} 
+        <TcgModal
+          pokemon={tcgPokemon}
+          onClose={() => setTcgPokemon(null)}
           selectedTcg={selectedTcg}
           toggleSelectTcg={toggleSelectTcg}
         />

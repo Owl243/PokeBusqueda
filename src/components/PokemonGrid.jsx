@@ -1,8 +1,9 @@
+import { memo } from "react";
 import PokemonCard from "./PokemonCard";
 
 
 
-function PokemonGrid({ pokemons, selected, toggleSelect, typeColors, gridSize, fetchType, typesMap }) {
+const PokemonGrid = memo(({ pokemons, selected, toggleSelect, typeColors, gridSize, fetchType, typesMap, onOpenTcg }) => {
     return (
         <div className="row g-2 p-1">
             {pokemons.map((poke, index) => {
@@ -18,11 +19,12 @@ function PokemonGrid({ pokemons, selected, toggleSelect, typeColors, gridSize, f
                         fetchType={fetchType}
                         typesMap={typesMap}
                         typeColors={typeColors}
+                        onOpenTcg={onOpenTcg}
                     />
                 );
             })}
         </div>
     );
-}
+});
 
 export default PokemonGrid;

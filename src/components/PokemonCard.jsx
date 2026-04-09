@@ -1,15 +1,25 @@
-import { useEffect } from "react";
+import { useEffect, useState, memo } from "react";
 
-function PokemonCard({ poke, isSelected, toggleSelect, gridSize, fetchType, typesMap, typeColors }) {
-    const getImage = (id) => {
-        return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
-    };
-
-    const image = poke.id > 20000
-        ? "/placeholder.png"
-        : `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${poke.id}.png`;
+const PokemonCard = memo(({ poke, isSelected, toggleSelect, gridSize, fetchType, typesMap, typeColors, onOpenTcg }) => {
     const colClass = gridSize === 9 ? "col-4" : "col-3";
 
+    const [imgUrl, setImgUrl] = useState(`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${poke.id}.png`);
+
+    useEffect(() => {
+        if (poke.id > 20000) {
+            const baseName = poke.name.replace("mega-", "").split("-")[0];
+            fetch(`https://pokeapi.co/api/v2/pokemon/${baseName}`)
+                .then(res => res.json())
+                .then(data => {
+                    setImgUrl(`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${data.id}.png`);
+                })
+                .catch(() => {
+                    setImgUrl("/placeholder.png");
+                });
+        } else {
+            setImgUrl(`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${poke.id}.png`);
+        }
+    }, [poke.id, poke.name]);
 
     const formatName = (name) => {
         return name
@@ -19,9 +29,10 @@ function PokemonCard({ poke, isSelected, toggleSelect, gridSize, fetchType, type
     };
 
     const displayName = formatName(poke.name);
+
     useEffect(() => {
-        fetchType(poke.id);
-    }, [poke.id, fetchType]);
+        fetchType(poke);
+    }, [poke, fetchType]);
 
     return (
         <div className={colClass}>
@@ -29,7 +40,8 @@ function PokemonCard({ poke, isSelected, toggleSelect, gridSize, fetchType, type
                 className="banner-card h-100 d-flex flex-column align-items-center justify-content-center"
                 style={{
                     backgroundColor: typeColors[typesMap[poke.id]] || "#ccc",
-                    border: isSelected ? "3px solid white" : "none"
+                    border: isSelected ? "3px solid white" : "none",
+                    position: "relative"
                 }}
                 onClick={() => toggleSelect(poke)}
                 title={poke.name}
@@ -38,10 +50,27 @@ function PokemonCard({ poke, isSelected, toggleSelect, gridSize, fetchType, type
                     #{poke.id}
                 </span>
 
+                <button
+                    type="button"
+                    className="btn btn-sm btn-dark p-0 d-flex justify-content-center align-items-center bg-dark bg-opacity-50 border-0"
+                    style={{ position: "absolute", top: "5px", right: "8px", width: "24px", height: "24px", fontSize: "0.80rem", zIndex: 10 }}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (onOpenTcg) onOpenTcg(poke);
+                    }}
+                    title="Ver cartas TCG"
+                >
+                    🎴
+                </button>
+
                 <img
-                    src={getImage(poke.id)}
+                    src={imgUrl}
                     onError={(e) => {
-                        e.target.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${poke.id}.png`;
+                        if (poke.id <= 20000) {
+                            e.target.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${poke.id}.png`;
+                        } else {
+                            e.target.src = "/placeholder.png";
+                        }
                     }}
                     style={{
                         width: "85px",
@@ -57,6 +86,6 @@ function PokemonCard({ poke, isSelected, toggleSelect, gridSize, fetchType, type
             </div>
         </div>
     );
-}
+});
 
 export default PokemonCard;

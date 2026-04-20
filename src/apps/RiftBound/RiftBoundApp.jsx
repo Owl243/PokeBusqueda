@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import jsPDF from "jspdf";
-import { fetchRiftboundCards, fetchRiftboundSets } from "../../services/riftboundService";
+import { fetchRiftboundCards, fetchRiftboundSets, fetchAllRiftboundCards } from "../../services/riftboundService";
 import { saveToInventory } from "../../services/inventoryService";
 import GenericSelectedPanel from "../../components/GenericSelectedPanel";
 import Pagination from "../../components/Pagination";
@@ -14,6 +14,8 @@ function RiftBoundApp() {
   const [sets, setSets] = useState([]);
   const [selectedSet, setSelectedSet] = useState("origins");
   const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [allCards, setAllCards] = useState([]); // Cache for global search
   const cardsPerPage = 12;
 
   useEffect(() => {
@@ -21,13 +23,35 @@ function RiftBoundApp() {
   }, []);
 
   useEffect(() => {
-    setLoading(true);
-    setCurrentPage(1);
-    fetchRiftboundCards(selectedSet).then((data) => {
-      setCards(data);
-      setLoading(false);
-    });
-  }, [selectedSet]);
+    if (search.trim()) {
+      setLoading(true);
+      setCurrentPage(1);
+      
+      const performGlobalSearch = async () => {
+        let baseList = allCards;
+        if (baseList.length === 0) {
+          baseList = await fetchAllRiftboundCards();
+          setAllCards(baseList);
+        }
+        
+        const filtered = baseList.filter(c => 
+          c.name.toLowerCase().includes(search.toLowerCase()) ||
+          c.id.toLowerCase().includes(search.toLowerCase())
+        );
+        setCards(filtered);
+        setLoading(false);
+      };
+      
+      performGlobalSearch();
+    } else if (selectedSet) {
+      setLoading(true);
+      setCurrentPage(1);
+      fetchRiftboundCards(selectedSet).then((data) => {
+        setCards(data);
+        setLoading(false);
+      });
+    }
+  }, [selectedSet, search, allCards]);
 
   const indexOfLastCard = currentPage * cardsPerPage;
   const indexOfFirstCard = indexOfLastCard - cardsPerPage;
@@ -181,19 +205,30 @@ function RiftBoundApp() {
       
       <div className="text-center mb-5">
         <h1 className="display-4 text-info fw-bold" style={{ textShadow: "2px 2px 5px #000" }}>🌀 Rift Bound TCG</h1>
-        <p className="lead border-bottom border-info pb-3">Official Data from apitcg Repository</p>
+        <p className="lead border-bottom border-info pb-3">Domina el místico mundo de Rift Bound</p>
 
-        <div className="d-flex justify-content-center mb-4">
-          <div className="col-md-6">
+        <div className="d-flex flex-column align-items-center mb-4">
+          <div className="col-md-8 mb-3">
+             <input
+                type="text"
+                className="form-control bg-dark text-light border-info shadow-sm py-2"
+                placeholder="🔍 Buscar Champion, Spell, Unit..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+             />
+          </div>
+          <div className="col-md-6 text-center">
             <select 
               className="form-select bg-dark text-light border-info" 
               value={selectedSet} 
-              onChange={(e) => setSelectedSet(e.target.value)}
+              onChange={(e) => {
+                setSelectedSet(e.target.value);
+                setSearch(""); // Clear search when selecting set
+              }}
             >
               {sets.map(s => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
-              <option value="">Todos los Sets</option>
             </select>
           </div>
         </div>

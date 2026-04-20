@@ -16,6 +16,9 @@ function OnePieceApp() {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [allCards, setAllCards] = useState([]); // Cache for global search
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedColors, setSelectedColors] = useState([]);
+  const [selectedRarities, setSelectedRarities] = useState([]);
   const cardsPerPage = 12;
 
   useEffect(() => {
@@ -26,35 +29,50 @@ function OnePieceApp() {
   }, []);
 
   useEffect(() => {
-    if (search.trim()) {
-      setLoading(true);
-      setCurrentPage(1);
+    setLoading(true);
+    setCurrentPage(1);
+
+    const filterAndSetCards = (baseList) => {
+      let filtered = baseList;
       
+      // Text Search
+      if (search.trim()) {
+        filtered = filtered.filter(c => 
+          c.name.toLowerCase().includes(search.toLowerCase()) ||
+          c.id.toLowerCase().includes(search.toLowerCase())
+        );
+      }
+
+      // Color Filter (OR)
+      if (selectedColors.length > 0) {
+        filtered = filtered.filter(c => selectedColors.includes(c.color));
+      }
+
+      // Rarity Filter (OR)
+      if (selectedRarities.length > 0) {
+        filtered = filtered.filter(c => selectedRarities.includes(c.rarity));
+      }
+
+      setCards(filtered);
+      setLoading(false);
+    };
+
+    if (search.trim()) {
       const performGlobalSearch = async () => {
         let baseList = allCards;
         if (baseList.length === 0) {
           baseList = await fetchAllOnePieceCards();
           setAllCards(baseList);
         }
-        
-        const filtered = baseList.filter(c => 
-          c.name.toLowerCase().includes(search.toLowerCase()) ||
-          c.id.toLowerCase().includes(search.toLowerCase())
-        );
-        setCards(filtered);
-        setLoading(false);
+        filterAndSetCards(baseList);
       };
-      
       performGlobalSearch();
     } else if (selectedSet) {
-      setLoading(true);
-      setCurrentPage(1);
       fetchOnePieceCards(selectedSet).then((data) => {
-        setCards(data);
-        setLoading(false);
+        filterAndSetCards(data);
       });
     }
-  }, [selectedSet, search, allCards]);
+  }, [selectedSet, search, allCards, selectedColors, selectedRarities]);
 
   const indexOfLastCard = currentPage * cardsPerPage;
   const indexOfFirstCard = indexOfLastCard - cardsPerPage;
@@ -69,6 +87,18 @@ function OnePieceApp() {
       return [...prev, card];
     });
   }, []);
+
+  const toggleColor = (color) => {
+    setSelectedColors(prev => 
+      prev.includes(color) ? prev.filter(c => c !== color) : [...prev, color]
+    );
+  };
+
+  const toggleRarity = (rarity) => {
+    setSelectedRarities(prev => 
+      prev.includes(rarity) ? prev.filter(r => r !== rarity) : [...prev, rarity]
+    );
+  };
 
   const handleSaveInventory = () => {
     const cardsToSave = selected.map(c => ({
@@ -223,9 +253,9 @@ function OnePieceApp() {
       
       <div className="text-center mb-5">
         <h1 className="display-4 text-danger fw-bold" style={{ textShadow: "2px 2px 5px #000" }}>🏴‍☠️ One Piece TCG</h1>
-        <p className="lead border-bottom border-danger pb-3">Official Data from apitcg Repository</p>
+        <p className="lead border-bottom border-danger pb-3">Explora y colecciona el mundo de One Piece TCG</p>
         
-        <div className="d-flex flex-column align-items-center mb-4">
+        <div className="d-flex flex-column align-items-center mb-0">
           <div className="col-md-8 mb-3">
              <input
                 type="text"
@@ -235,7 +265,7 @@ function OnePieceApp() {
                 onChange={(e) => setSearch(e.target.value)}
              />
           </div>
-          <div className="col-md-6">
+          <div className="col-md-6 mb-3">
               <select 
                 className="form-select bg-dark text-light border-danger" 
                 value={selectedSet} 
@@ -249,6 +279,68 @@ function OnePieceApp() {
                 ))}
               </select>
           </div>
+          
+          <button 
+            className={`btn btn-sm ${showFilters ? 'btn-danger' : 'btn-outline-danger'} mb-3`}
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            {showFilters ? "✕ Cerrar Filtros" : "⚙️ Filtros Avanzados"}
+          </button>
+
+          {showFilters && (
+            <div className="col-md-10 p-3 rounded bg-dark border border-danger border-opacity-25 mb-4 animate-fade-in">
+              <div className="row">
+                <div className="col-md-6 border-end border-secondary border-opacity-25">
+                  <h6 className="small fw-bold text-danger mb-3">COLORES</h6>
+                  <div className="d-flex flex-wrap gap-2 justify-content-center">
+                    {['Red', 'Blue', 'Green', 'Purple', 'Black', 'Yellow'].map(color => (
+                        <span 
+                          key={color}
+                          onClick={() => toggleColor(color)}
+                          className={`badge rounded-pill p-2 px-3 border cursor-pointer ${
+                            selectedColors.includes(color) 
+                              ? (color === 'Red' ? 'bg-danger' : color === 'Blue' ? 'bg-primary' : color === 'Green' ? 'bg-success' : color === 'Purple' ? 'bg-info text-dark' : color === 'Black' ? 'bg-secondary' : 'bg-warning text-dark') 
+                              : 'bg-transparent text-secondary border-secondary opacity-50'
+                          }`}
+                          style={{ cursor: "pointer", transition: "all 0.2s" }}
+                        >
+                          {color}
+                        </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="col-md-6 mt-3 mt-md-0">
+                  <h6 className="small fw-bold text-danger mb-3">RAREZAS</h6>
+                  <div className="d-flex flex-wrap gap-2 justify-content-center">
+                    {['L', 'C', 'UC', 'R', 'SR', 'SEC', 'P'].map(rarity => (
+                        <span 
+                          key={rarity}
+                          onClick={() => toggleRarity(rarity)}
+                          className={`badge p-2 px-3 border cursor-pointer ${
+                            selectedRarities.includes(rarity) 
+                              ? 'bg-danger text-white border-danger' 
+                              : 'bg-transparent text-secondary border-secondary opacity-50'
+                          }`}
+                          style={{ cursor: "pointer", transition: "all 0.2s" }}
+                        >
+                          {rarity}
+                        </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              { (selectedColors.length > 0 || selectedRarities.length > 0) && (
+                <div className="text-center mt-3">
+                  <button 
+                    className="btn btn-link btn-sm text-secondary text-decoration-none"
+                    onClick={() => { setSelectedColors([]); setSelectedRarities([]); }}
+                  >
+                    Reiniciar Filtros
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -302,6 +394,16 @@ function OnePieceApp() {
           </div>
         </div>
       )}
+      <style>{`
+        .animate-fade-in {
+          animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .cursor-pointer { cursor: pointer; }
+      `}</style>
     </div>
   );
 }

@@ -93,7 +93,7 @@ function Home() {
                   <div className="card border-0 bg-slate-800 h-100 shadow-sm py-4" style={{ borderRadius: "16px", background: "#1e293b", border: "1px solid rgba(255,255,255,0.05)" }}>
                     <div className="display-5 mb-2">🏴‍☠️</div>
                     <h5 className="fw-bold mb-1 text-white">One Piece</h5>
-                    <p className="text-secondary small mb-0">Card Game Data</p>
+                    <p className="text-secondary small mb-0">Colecciona desde Romance Dawn hasta las leyendas del Nuevo Mundo. Filtra por color y rareza.</p>
                   </div>
                 </Link>
               </div>
@@ -104,7 +104,7 @@ function Home() {
                   <div className="card border-0 bg-slate-800 h-100 shadow-sm py-4" style={{ borderRadius: "16px", background: "#1e293b", border: "1px solid rgba(255,255,255,0.05)" }}>
                     <div className="display-5 mb-2">🌀</div>
                     <h5 className="fw-bold mb-1 text-white">Rift Bound</h5>
-                    <p className="text-secondary small mb-0">TCG Origins</p>
+                    <p className="text-secondary small mb-0">Domina los elementos y las grietas místicas. Busca cartas en todos los sets disponibles.</p>
                   </div>
                 </Link>
               </div>

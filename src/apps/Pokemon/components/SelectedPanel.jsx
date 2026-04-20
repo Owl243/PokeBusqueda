@@ -8,8 +8,8 @@ const formatName = (name) => {
 };
 
 const SelectedPanel = memo(({ 
-    selected, toggleSelect, generatePDF, 
-    selectedTcg, toggleSelectTcg, generateTCGPdf,
+    selected, toggleSelect, generatePDF, generateIMG,
+    selectedTcg, toggleSelectTcg, generateTCGPdf, generateTCGIMG, onSaveTcgInventory,
     isListMinimized, setIsListMinimized 
 }) => {
 
@@ -51,9 +51,14 @@ const SelectedPanel = memo(({
                                         </span>
                                     ))}
                                 </div>
-                                <button className="btn btn-success btn-sm w-100" onClick={generatePDF}>
-                                    Generar PDF Pokédex
-                                </button>
+                                <div className="d-flex gap-2">
+                                    <button className="btn btn-success btn-sm w-100" onClick={generatePDF}>
+                                        Generar PDF
+                                    </button>
+                                    <button className="btn btn-info btn-sm w-100 text-white fw-bold" onClick={generateIMG}>
+                                        Generar IMG (Máx 16)
+                                    </button>
+                                </div>
                             </div>
                         )}
 
@@ -74,8 +79,16 @@ const SelectedPanel = memo(({
                                         </span>
                                     ))}
                                 </div>
-                                <button className="btn btn-primary btn-sm w-100 fw-bold" onClick={generateTCGPdf}>
-                                    Generar PDF Cartas (4x4)
+                                <div className="d-flex gap-2">
+                                    <button className="btn btn-primary btn-sm w-100 fw-bold" onClick={generateTCGPdf}>
+                                        Generar PDF Cartas
+                                    </button>
+                                    <button className="btn btn-info btn-sm w-100 text-white fw-bold" onClick={generateTCGIMG}>
+                                        Generar IMG (Máx 16)
+                                    </button>
+                                </div>
+                                <button className="btn btn-outline-warning btn-sm w-100 fw-bold mt-2" onClick={onSaveTcgInventory}>
+                                    🎒 Guardar en Inventario
                                 </button>
                             </div>
                         )}

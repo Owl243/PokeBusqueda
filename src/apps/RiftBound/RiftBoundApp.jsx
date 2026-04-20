@@ -1,18 +1,38 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import jsPDF from "jspdf";
-import { fetchRiftBoundCards } from "../../services/mockTcgApi";
+import { fetchRiftboundCards, fetchRiftboundSets } from "../../services/riftboundService";
 import { saveToInventory } from "../../services/inventoryService";
 import GenericSelectedPanel from "../../components/GenericSelectedPanel";
+import Pagination from "../../components/Pagination";
 
 function RiftBoundApp() {
   const [cards, setCards] = useState([]);
   const [selected, setSelected] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [sets, setSets] = useState([]);
+  const [selectedSet, setSelectedSet] = useState("origins");
+  const [currentPage, setCurrentPage] = useState(1);
+  const cardsPerPage = 12;
 
   useEffect(() => {
-    fetchRiftBoundCards().then(setCards);
+    fetchRiftboundSets().then(setSets);
   }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    setCurrentPage(1);
+    fetchRiftboundCards(selectedSet).then((data) => {
+      setCards(data);
+      setLoading(false);
+    });
+  }, [selectedSet]);
+
+  const indexOfLastCard = currentPage * cardsPerPage;
+  const indexOfFirstCard = indexOfLastCard - cardsPerPage;
+  const currentCards = cards.slice(indexOfFirstCard, indexOfLastCard);
+  const totalPages = Math.ceil(cards.length / cardsPerPage);
 
   const toggleSelect = useCallback((card) => {
     setSelected(prev => {
@@ -49,7 +69,7 @@ function RiftBoundApp() {
 
       const imagesData = await Promise.all(
         selected.map(async (card) => {
-           const proxyUrl = `https://wsrv.nl/?url=${encodeURIComponent(card.img)}&output=png`;
+           const proxyUrl = `https://i0.wp.com/${card.img.replace(/^https?:\/\//, "")}`;
            try {
              const res = await fetch(proxyUrl);
              const blob = await res.blob();
@@ -66,6 +86,11 @@ function RiftBoundApp() {
         const imgData = imagesData[i];
         if (imgData) doc.addImage(imgData, "PNG", x, y, cardWidth, cardHeight);
         
+        // Credit footer
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text("archivo generado en https://multi-tcg-docs.vercel.app/ - Hecho por Vaiu", 105, 290, { align: "center" });
+
         x += cardWidth + spaceX;
         if (x + cardWidth > 200) {
           x = 10;
@@ -105,7 +130,7 @@ function RiftBoundApp() {
 
       const imagesData = await Promise.all(
         selected.map(async (card) => {
-           const proxyUrl = `https://wsrv.nl/?url=${encodeURIComponent(card.img)}&output=png`;
+           const proxyUrl = `https://i0.wp.com/${card.img.replace(/^https?:\/\//, "")}`;
            try {
              const res = await fetch(proxyUrl);
              const blob = await res.blob();
@@ -133,6 +158,13 @@ function RiftBoundApp() {
         }
       }
 
+      // Final Credit Footer for Image
+      ctx.font = "bold 14px sans-serif";
+      ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+      ctx.textAlign = "center";
+      ctx.fillText("archivo generado en https://multi-tcg-docs.vercel.app/ - Hecho por Vaiu", canvas.width / 2, canvas.height - 10);
+      ctx.textAlign = "left";
+
       const link = document.createElement('a');
       link.download = 'riftbound-collection.png';
       link.href = canvas.toDataURL('image/png');
@@ -149,23 +181,53 @@ function RiftBoundApp() {
       
       <div className="text-center mb-5">
         <h1 className="display-4 text-info fw-bold" style={{ textShadow: "2px 2px 5px #000" }}>🌀 Rift Bound TCG</h1>
-        <p className="lead border-bottom border-info pb-3">Prueba de Integración (Dataset Genérico)</p>
+        <p className="lead border-bottom border-info pb-3">Official Data from apitcg Repository</p>
+
+        <div className="d-flex justify-content-center mb-4">
+          <div className="col-md-6">
+            <select 
+              className="form-select bg-dark text-light border-info" 
+              value={selectedSet} 
+              onChange={(e) => setSelectedSet(e.target.value)}
+            >
+              {sets.map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+              <option value="">Todos los Sets</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      {!cards.length ? (
+      {loading ? (
         <div className="text-center"><div className="spinner-border text-info"></div></div>
       ) : (
         <div className="row g-3">
-          {cards.map(card => {
+          {currentCards.map(card => {
             const isSelected = selected.some(c => c.id === card.id);
             return (
               <div key={card.id} className="col-6 col-md-3 col-lg-2" onClick={() => toggleSelect(card)} style={{ cursor: "pointer" }}>
                 <div className={`card bg-dark ${isSelected ? 'border-success shadow-lg' : 'border-secondary'} position-relative h-100 p-1`}>
                     {isSelected && <div className="position-absolute top-0 end-0 bg-success text-white px-2 py-1 m-1 fs-5 rounded-circle" style={{ zIndex: 10 }}>✓</div>}
-                    <img src={card.img} className="card-img-top rounded" alt={card.name} style={{ objectFit: 'contain' }} />
+                    <img 
+                      src={`https://i0.wp.com/${card.img.replace(/^https?:\/\//, "")}`} 
+                      className="card-img-top rounded" 
+                      alt={card.name} 
+                      style={{ objectFit: 'contain' }} 
+                    />
                     <div className="card-body p-2 text-center">
                         <small className="fw-bold text-light d-block text-truncate border-bottom border-secondary pb-1">{card.name}</small>
-                        <span className="badge bg-secondary mt-1">{card.type}</span>
+                        <div className="text-center mt-2">
+                          <span className={`badge ${
+                            card.color?.toLowerCase().includes('fire') ? 'bg-danger' : 
+                            card.color?.toLowerCase().includes('water') ? 'bg-primary' : 
+                            card.color?.toLowerCase().includes('earth') ? 'bg-success' : 
+                            card.color?.toLowerCase().includes('aether') ? 'bg-info text-dark' : 
+                            'bg-secondary'
+                          } mt-1`}>
+                            {card.color}
+                          </span>
+                        </div>
                     </div>
                 </div>
               </div>
@@ -173,6 +235,13 @@ function RiftBoundApp() {
           })}
         </div>
       )}
+
+      {/* Pagination Controls */}
+      <Pagination 
+        currentPage={currentPage}
+        totalPages={totalPages}
+        setCurrentPage={setCurrentPage}
+      />
 
       <GenericSelectedPanel 
         selected={selected}

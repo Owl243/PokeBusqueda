@@ -1,18 +1,65 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import jsPDF from "jspdf";
-import { fetchOnePieceCards } from "../../services/mockTcgApi";
+import { fetchOnePieceCards, fetchOnePieceSets, fetchAllOnePieceCards } from "../../services/onePieceService";
 import { saveToInventory } from "../../services/inventoryService";
 import GenericSelectedPanel from "../../components/GenericSelectedPanel";
+import Pagination from "../../components/Pagination";
 
 function OnePieceApp() {
   const [cards, setCards] = useState([]);
+  const [sets, setSets] = useState([]);
+  const [selectedSet, setSelectedSet] = useState("");
   const [selected, setSelected] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [allCards, setAllCards] = useState([]); // Cache for global search
+  const cardsPerPage = 12;
 
   useEffect(() => {
-    fetchOnePieceCards().then(setCards);
+    fetchOnePieceSets().then((data) => {
+      setSets(data);
+      if (data.length > 0) setSelectedSet(data[0].id);
+    });
   }, []);
+
+  useEffect(() => {
+    if (search.trim()) {
+      setLoading(true);
+      setCurrentPage(1);
+      
+      const performGlobalSearch = async () => {
+        let baseList = allCards;
+        if (baseList.length === 0) {
+          baseList = await fetchAllOnePieceCards();
+          setAllCards(baseList);
+        }
+        
+        const filtered = baseList.filter(c => 
+          c.name.toLowerCase().includes(search.toLowerCase()) ||
+          c.id.toLowerCase().includes(search.toLowerCase())
+        );
+        setCards(filtered);
+        setLoading(false);
+      };
+      
+      performGlobalSearch();
+    } else if (selectedSet) {
+      setLoading(true);
+      setCurrentPage(1);
+      fetchOnePieceCards(selectedSet).then((data) => {
+        setCards(data);
+        setLoading(false);
+      });
+    }
+  }, [selectedSet, search, allCards]);
+
+  const indexOfLastCard = currentPage * cardsPerPage;
+  const indexOfFirstCard = indexOfLastCard - cardsPerPage;
+  const currentCards = cards.slice(indexOfFirstCard, indexOfLastCard);
+  const totalPages = Math.ceil(cards.length / cardsPerPage);
 
   const toggleSelect = useCallback((card) => {
     setSelected(prev => {
@@ -49,8 +96,7 @@ function OnePieceApp() {
 
       const imagesData = await Promise.all(
         selected.map(async (card) => {
-           // Si el MOCK da CORS o 404 proxy
-           const proxyUrl = `https://wsrv.nl/?url=${encodeURIComponent(card.img)}&output=png`;
+            const proxyUrl = `https://wsrv.nl/?url=${encodeURIComponent(card.img)}`;
            try {
              const res = await fetch(proxyUrl);
              const blob = await res.blob();
@@ -73,6 +119,11 @@ function OnePieceApp() {
             doc.setFillColor(200, 200, 200);
             doc.rect(x, y, cardWidth, cardHeight, "F");
         }
+
+        // Credit footer
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text("archivo generado en https://multi-tcg-docs.vercel.app/ - Hecho por Vaiu", 105, 290, { align: "center" });
 
         x += cardWidth + spaceX;
         if (x + cardWidth > 200) {
@@ -120,7 +171,7 @@ function OnePieceApp() {
 
       const imagesData = await Promise.all(
         selected.map(async (card) => {
-           const proxyUrl = `https://wsrv.nl/?url=${encodeURIComponent(card.img)}&output=png`;
+           const proxyUrl = `https://wsrv.nl/?url=${encodeURIComponent(card.img)}`;
            try {
              const res = await fetch(proxyUrl);
              const blob = await res.blob();
@@ -146,11 +197,15 @@ function OnePieceApp() {
             img.src = imgData;
             await new Promise(r => { img.onload = r; });
             ctx.drawImage(img, x, y, cardWidth, cardHeight);
-        } else {
-            ctx.fillStyle = "#555";
-            ctx.fillRect(x, y, cardWidth, cardHeight);
         }
       }
+
+      // Final Credit Footer for Image
+      ctx.font = "bold 14px sans-serif";
+      ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+      ctx.textAlign = "center";
+      ctx.fillText("archivo generado en https://multi-tcg-docs.vercel.app/ - Hecho por Vaiu", canvas.width / 2, canvas.height - 10);
+      ctx.textAlign = "left";
 
       const link = document.createElement('a');
       link.download = 'onepiece-collection.png';
@@ -168,23 +223,53 @@ function OnePieceApp() {
       
       <div className="text-center mb-5">
         <h1 className="display-4 text-danger fw-bold" style={{ textShadow: "2px 2px 5px #000" }}>🏴‍☠️ One Piece TCG</h1>
-        <p className="lead border-bottom border-danger pb-3">Generador de Decklist (Simulado mediante Mock API)</p>
+        <p className="lead border-bottom border-danger pb-3">Official Data from apitcg Repository</p>
+        
+        <div className="d-flex flex-column align-items-center mb-4">
+          <div className="col-md-8 mb-3">
+             <input
+                type="text"
+                className="form-control bg-dark text-light border-danger shadow-sm py-2"
+                placeholder="🔍 Buscar Luffy, Zoro, ST01-001..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+             />
+          </div>
+          <div className="col-md-6">
+              <select 
+                className="form-select bg-dark text-light border-danger" 
+                value={selectedSet} 
+                onChange={(e) => {
+                   setSelectedSet(e.target.value);
+                   setSearch(""); // Clear search when selecting set
+                }}
+              >
+                {sets.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+          </div>
+        </div>
       </div>
 
-      {!cards.length ? (
+      {loading ? (
         <div className="text-center"><div className="spinner-border text-danger"></div></div>
       ) : (
         <div className="row g-3">
-          {cards.map(card => {
+          {currentCards.map(card => {
             const isSelected = selected.some(c => c.id === card.id);
             return (
               <div key={card.id} className="col-6 col-md-3 col-lg-2" onClick={() => toggleSelect(card)} style={{ cursor: "pointer" }}>
                 <div className={`card bg-dark ${isSelected ? 'border-success shadow-lg' : 'border-secondary'} position-relative h-100 p-1`}>
                     {isSelected && <div className="position-absolute top-0 end-0 bg-success text-white px-2 py-1 m-1 fs-5 rounded-circle" style={{ zIndex: 10 }}>✓</div>}
-                    <img src={card.img} className="card-img-top rounded" alt={card.name} style={{ objectFit: 'contain' }} />
+                    <img src={`https://wsrv.nl/?url=${encodeURIComponent(card.img)}`} className="card-img-top rounded" alt={card.name} style={{ objectFit: 'contain' }} />
                     <div className="card-body p-2 text-center">
                         <small className="fw-bold text-light d-block text-truncate border-bottom border-secondary pb-1">{card.name}</small>
-                        <span className={`badge ${card.color === 'Blue' ? 'bg-primary' : 'bg-danger'} mt-1`}>{card.color}</span>
+                        <div className="text-center mt-2">
+                          <span className={`badge ${card.color === 'Blue' ? 'bg-primary' : card.color === 'Red' ? 'bg-danger' : card.color === 'Green' ? 'bg-success' : card.color === 'Purple' ? 'bg-info text-dark' : 'bg-secondary'} mt-1`}>
+                            {card.color}
+                          </span>
+                        </div>
                     </div>
                 </div>
               </div>
@@ -193,10 +278,17 @@ function OnePieceApp() {
         </div>
       )}
 
+      {/* Pagination Controls */}
+      <Pagination 
+        currentPage={currentPage}
+        totalPages={totalPages}
+        setCurrentPage={setCurrentPage}
+      />
+
       <GenericSelectedPanel 
-        selected={selected}
+        selected={selected} 
         toggleSelect={toggleSelect}
-        generatePDF={generatePDF}
+        generatePDF={generatePDF} 
         generateIMG={generateIMG}
         onSaveInventory={handleSaveInventory}
         tcgName="One Piece"

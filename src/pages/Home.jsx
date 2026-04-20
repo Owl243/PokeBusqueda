@@ -2,116 +2,140 @@ import { Link } from "react-router-dom";
 
 function Home() {
   return (
-    <div className="container mt-5 text-center text-light pb-5">
-      <h1 className="display-3 fw-bold text-white mb-4" style={{ textShadow: "2px 2px 8px rgba(0,0,0,0.9)" }}>
-        🌟 MultiTCG Hub
-      </h1>
-      <p className="lead mb-5 mx-auto text-light" style={{ maxWidth: "600px", textShadow: "1px 1px 3px rgba(0,0,0,0.8)" }}>
-        Explora las bases de datos de tus juegos de cartas favoritos. Crea PDFs, imágenes de tus colecciones y comparte tu inventario fácilmente.
-      </p>
+    <div className="container-fluid min-vh-100 bg-dark text-light p-0 d-flex flex-column align-items-center" style={{ background: "#0f172a" }}>
 
-      {/* Inventario Principal */}
-      <div className="row justify-content-center mb-5">
-        <div className="col-12 col-md-6 col-lg-4">
-          <Link to="/inventory" className="text-decoration-none">
-            <div className="card bg-dark text-light border-success shadow-lg hover-effect bg-gradient" style={{ borderRadius: "20px" }}>
-              <div className="card-body d-flex align-items-center justify-content-center py-4 gap-3">
-                <span className="display-4">🎒</span>
-                <div className="text-start">
-                  <h3 className="text-success fw-bold mb-0">Mi Inventario</h3>
-                  <p className="text-light mb-0 small">Tus cartas guardadas y compartidas</p>
-                </div>
-              </div>
-            </div>
-          </Link>
+      {/* Header Minimalista */}
+      <div className="text-center py-5 px-3 mb-4 w-100 position-relative" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(30, 41, 59, 0.5)" }}>
+        <div className="position-absolute top-0 end-0 m-3">
+          <span className="badge rounded-pill bg-info text-dark fw-bold px-3 py-2 shadow-sm" style={{ fontSize: "0.7rem" }}>
+            🚀 EN DESARROLLO (BETA)
+          </span>
         </div>
+        <h1 className="display-4 fw-bold mb-1 text-white">
+          Multi<span className="text-info">TCG</span> Hub
+        </h1>
+        <p className="text-secondary small mb-0">La herramienta definitiva para coleccionistas de cartas</p>
       </div>
 
-      <h4 className="text-secondary fw-bold mb-4">Selecciona un TCG</h4>
+      <div className="container" style={{ maxWidth: "850px" }}>
 
-      <div className="row justify-content-center gap-4 px-3">
-        {/* Pokémon */}
-        <div className="col-12 col-md-5 col-lg-3 p-0">
-          <Link to="/pokemon" className="text-decoration-none h-100 d-block">
-            <div className="card text-white border-0 shadow-lg h-100 hover-effect tcg-card" 
-                 style={{ 
-                   backgroundImage: "linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.9)), url('https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?q=80&w=1000&auto=format&fit=crop')",
-                   backgroundSize: "cover",
-                   backgroundPosition: "center",
-                   borderRadius: "20px"
-                 }}>
-              <div className="card-body d-flex flex-column justify-content-end align-items-center p-4 min-vh-25">
-                <span className="display-4 mb-2">⚡</span>
-                <h3 className="fw-bold text-warning" style={{ textShadow: "1px 1px 5px #000" }}>Pokémon</h3>
-                <p className="text-light mb-0" style={{ textShadow: "1px 1px 5px #000" }}>Pokédex & TCG</p>
+        {/* Guía de Uso Rápida */}
+        <div className="row g-3 mb-5 px-2">
+           <div className="col-12">
+              <div className="p-4 rounded-4" style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.1)" }}>
+                <h6 className="text-info fw-bold mb-3">¿Cómo funciona?</h6>
+                <div className="row text-center g-3">
+                  <div className="col-4">
+                    <div className="h3 mb-1">🔍</div>
+                    <div className="small fw-bold">Busca</div>
+                    <div className="text-muted" style={{ fontSize: "0.65rem" }}>Encuentra cualquier carta</div>
+                  </div>
+                  <div className="col-4 border-start border-end border-secondary border-opacity-25">
+                    <div className="h3 mb-1">🎒</div>
+                    <div className="small fw-bold">Colecciona</div>
+                    <div className="text-muted" style={{ fontSize: "0.65rem" }}>Añádelas a tu inventario</div>
+                  </div>
+                  <div className="col-4">
+                    <div className="h3 mb-1">📄</div>
+                    <div className="small fw-bold">Exporta</div>
+                    <div className="text-muted" style={{ fontSize: "0.65rem" }}>Genera PDF o Imagen</div>
+                  </div>
+                </div>
               </div>
-            </div>
-          </Link>
+           </div>
         </div>
 
-        {/* One Piece */}
-        <div className="col-12 col-md-5 col-lg-3 p-0">
-          <Link to="/one-piece" className="text-decoration-none h-100 d-block">
-            <div className="card text-white border-0 shadow-lg h-100 hover-effect tcg-card" 
-                 style={{ 
-                   backgroundImage: "linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.9)), url('https://images.unsplash.com/photo-1578351567104-583d7fc8ad72?q=80&w=1000&auto=format&fit=crop')",
-                   backgroundSize: "cover",
-                   backgroundPosition: "center",
-                   borderRadius: "20px"
-                 }}>
-              <div className="card-body d-flex flex-column justify-content-end align-items-center p-4 min-vh-25">
-                <span className="display-4 mb-2">🏴‍☠️</span>
-                <h3 className="fw-bold text-danger" style={{ textShadow: "1px 1px 5px #000" }}>One Piece</h3>
-                <p className="text-light mb-0" style={{ textShadow: "1px 1px 5px #000" }}>Trading Card Game</p>
+        <div className="row g-4 mb-5 px-2">
+          {/* Dashboard Card - Inventory */}
+          <div className="col-12">
+            <Link to="/inventory" className="text-decoration-none">
+              <div className="card border-0 shadow-lg"
+                style={{
+                  background: "linear-gradient(90deg, #1e293b 0%, #334155 100%)",
+                  borderRadius: "20px",
+                  border: "1px solid rgba(255,255,255,0.1)"
+                }}>
+                <div className="card-body d-flex align-items-center justify-content-between p-4">
+                  <div>
+                    <h4 className="fw-bold mb-1 text-info">🎒 Mi Inventario</h4>
+                    <p className="mb-0 text-secondary small">Gestiona y comparte tu colección personal con códigos QR</p>
+                  </div>
+                  <div className="h1 mb-0 opacity-25">📋</div>
+                </div>
+              </div>
+            </Link>
+          </div>
+
+          {/* TCG Sections */}
+          <div className="col-12 mt-5">
+            <div className="d-flex justify-content-between align-items-center mb-3 px-2">
+              <h6 className="text-uppercase text-secondary ls-wide fw-bold mb-0" style={{ fontSize: "0.75rem", letterSpacing: "2px" }}>
+                Juegos Disponibles
+              </h6>
+              <span className="badge bg-secondary-subtle text-secondary small" style={{ fontSize: "0.6rem" }}>3 ACTIVOS</span>
+            </div>
+            
+            <div className="row g-3">
+              {/* Pokemon */}
+              <div className="col-12 col-md-4">
+                <Link to="/pokemon" className="text-decoration-none text-center">
+                  <div className="card border-0 bg-slate-800 h-100 shadow-sm py-4" style={{ borderRadius: "16px", background: "#1e293b", border: "1px solid rgba(255,255,255,0.05)" }}>
+                    <div className="display-5 mb-2">⚡</div>
+                    <h5 className="fw-bold mb-1 text-white">Pokémon</h5>
+                    <p className="text-secondary small mb-0">Pokédex & TCG</p>
+                  </div>
+                </Link>
+              </div>
+
+              {/* One Piece */}
+              <div className="col-12 col-md-4">
+                <Link to="/one-piece" className="text-decoration-none text-center">
+                  <div className="card border-0 bg-slate-800 h-100 shadow-sm py-4" style={{ borderRadius: "16px", background: "#1e293b", border: "1px solid rgba(255,255,255,0.05)" }}>
+                    <div className="display-5 mb-2">🏴‍☠️</div>
+                    <h5 className="fw-bold mb-1 text-white">One Piece</h5>
+                    <p className="text-secondary small mb-0">Card Game Data</p>
+                  </div>
+                </Link>
+              </div>
+
+              {/* Rift Bound */}
+              <div className="col-12 col-md-4">
+                <Link to="/rift-bound" className="text-decoration-none text-center">
+                  <div className="card border-0 bg-slate-800 h-100 shadow-sm py-4" style={{ borderRadius: "16px", background: "#1e293b", border: "1px solid rgba(255,255,255,0.05)" }}>
+                    <div className="display-5 mb-2">🌀</div>
+                    <h5 className="fw-bold mb-1 text-white">Rift Bound</h5>
+                    <p className="text-secondary small mb-0">TCG Origins</p>
+                  </div>
+                </Link>
               </div>
             </div>
-          </Link>
+          </div>
         </div>
 
-        {/* Rift Bound */}
-        <div className="col-12 col-md-5 col-lg-3 p-0">
-          <Link to="/rift-bound" className="text-decoration-none h-100 d-block">
-            <div className="card text-white border-0 shadow-lg h-100 hover-effect tcg-card" 
-                 style={{ 
-                   backgroundImage: "linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.9)), url('https://images.unsplash.com/photo-1629851600115-4673fb117baf?q=80&w=1000&auto=format&fit=crop')",
-                   backgroundSize: "cover",
-                   backgroundPosition: "center",
-                   borderRadius: "20px"
-                 }}>
-              <div className="card-body d-flex flex-column justify-content-end align-items-center p-4 min-vh-25">
-                <span className="display-4 mb-2">🌀</span>
-                <h3 className="fw-bold text-info" style={{ textShadow: "1px 1px 5px #000" }}>Rift Bound</h3>
-                <p className="text-light mb-0" style={{ textShadow: "1px 1px 5px #000" }}>Trading Card Game</p>
-              </div>
-            </div>
-          </Link>
+        {/* Proximamente */}
+        <div className="text-center mb-5 opacity-50">
+           <h6 className="text-uppercase small fw-bold mb-3" style={{ letterSpacing: "1px" }}>Próximamente</h6>
+           <div className="d-flex justify-content-center gap-4 text-secondary small">
+              <span>Magic: The Gathering</span>
+              <span>Lorcana</span>
+              <span>Star Wars: Unlimited</span>
+           </div>
+        </div>
+
+        {/* Footer Credit */}
+        <div className="text-center py-4 mt-5 border-top border-secondary border-opacity-10">
+          <p className="text-muted mb-0" style={{ fontSize: "0.65rem" }}>
+            &copy; 2026 MultiTCG System — Hecho por <span className="text-info">Vaiu</span>
+          </p>
         </div>
 
       </div>
 
       <style>{`
-        .hover-effect {
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        .hover-effect:hover {
-          transform: translateY(-8px);
-          box-shadow: 0 15px 30px rgba(0,0,0,0.6) !important;
-          cursor: pointer;
-        }
-        .min-vh-25 {
-          min-height: 280px;
-        }
-        .tcg-card::before {
-          content: "";
-          position: absolute;
-          top: 0; left: 0; right: 0; bottom: 0;
-          border: 2px solid rgba(255,255,255,0.1);
-          border-radius: 20px;
-          pointer-events: none;
-        }
-        .tcg-card:hover::before {
-          border-color: rgba(255,255,255,0.4);
-        }
+        .bg-slate-800 { background: #1e293b !important; }
+        .card { transition: transform 0.2s ease; }
+        .card:hover { transform: translateY(-5px); background: #334155 !important; }
+        .ls-wide { letter-spacing: 0.1em; }
       `}</style>
     </div>
   );

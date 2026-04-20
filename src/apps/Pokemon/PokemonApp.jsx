@@ -7,7 +7,7 @@ import "./PokemonApp.css";
 
 // 🧩 COMPONENTES
 import PokemonGrid from "./components/PokemonGrid";
-import Pagination from "./components/Pagination";
+import Pagination from "../../components/Pagination";
 import SelectedPanel from "./components/SelectedPanel";
 import TcgModal from "./components/TcgModal";
 
@@ -283,6 +283,11 @@ function App() {
         doc.setTextColor(100);
         doc.text(setName, x + cardWidth / 2, y + cardHeight + 4, { align: "center", maxWidth: cardWidth });
 
+        // Credit footer
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text("archivo generado en https://multi-tcg-docs.vercel.app/ - Hecho por Vaiu", 105, 290, { align: "center" });
+
         x += cardWidth + spaceX;
 
         // Limite horizontal
@@ -418,6 +423,13 @@ function App() {
         }
       }
 
+      // Final Credit Footer for Image
+      ctx.font = "bold 14px sans-serif";
+      ctx.fillStyle = "rgba(0, 0, 0, 0.4)"; // Black for Pokemon which has light bg
+      ctx.textAlign = "center";
+      ctx.fillText("archivo generado en https://multi-tcg-docs.vercel.app/ - Hecho por Vaiu", canvas.width / 2, canvas.height - 10);
+      ctx.textAlign = "left";
+
       const link = document.createElement('a');
       link.download = 'pokemon-cards.png';
       link.href = canvas.toDataURL('image/png');
@@ -531,8 +543,8 @@ function App() {
       filtered = filtered.filter(p => p.id <= 10000);
     }
 
-    // Filtrar por generación
-    if (gen) {
+    // Filtrar por generación (Solo si NO hay búsqueda activa)
+    if (gen && !search.trim()) {
       filtered = filtered.filter(p => {
         // Si es normal, validamos su ID directamente
         if (p.id <= 10000) {
@@ -544,8 +556,6 @@ function App() {
           if (basePoke) {
             return basePoke.id >= gen.start && basePoke.id <= gen.end;
           }
-          // Excepciones donde base no aplica perfecto (ej. "mega-mewtwo-x", base="mewtwo")
-          // "mewtwo" se detectará bien gracias a .split("-")[0].
           return false;
         }
       });

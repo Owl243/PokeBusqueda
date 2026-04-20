@@ -3,6 +3,11 @@ import { Link, useSearchParams } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { getInventory, removeFromInventory, generateShareLink, decodeShareLink } from "../services/inventoryService";
 
+// Services for hydration
+import { fetchAllOnePieceCards } from "../services/onePieceService";
+import { fetchAllRiftboundCards } from "../services/riftboundService";
+import { getPokemons } from "../apps/Pokemon/services/pokeApi";
+
 function Inventory() {
   const [searchParams] = useSearchParams();
   const shareData = searchParams.get("share");
@@ -10,18 +15,102 @@ function Inventory() {
   const [cards, setCards] = useState([]);
   const [isShared, setIsShared] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [isHydrating, setIsHydrating] = useState(false);
 
   useEffect(() => {
     if (shareData) {
       const decoded = decodeShareLink(shareData);
       if (decoded) {
-        setCards(decoded);
         setIsShared(true);
+        // Check if hydration is needed (look for non-hydrated items)
+        const needsHydration = decoded.some(c => !c.hydrated);
+        
+        if (needsHydration) {
+          setCards(decoded); // Show skeletal cards initially
+          hydrateCards(decoded);
+        } else {
+          setCards(decoded);
+        }
       }
     } else {
       setCards(getInventory());
     }
   }, [shareData]);
+
+  const hydrateCards = async (minimalCards) => {
+    setIsHydrating(true);
+    console.log("Hydration logic v3.1 active. Cards to hydrate:", minimalCards.length);
+    
+    try {
+      const results = await Promise.allSettled([
+        fetchAllOnePieceCards(),
+        fetchAllRiftboundCards(),
+        getPokemons()
+      ]);
+
+      const opCards = results[0].status === 'fulfilled' ? results[0].value : [];
+      const rbCards = results[1].status === 'fulfilled' ? results[1].value : [];
+      const pkmList = results[2].status === 'fulfilled' ? results[2].value : [];
+
+      console.log(`Sources: OP(${opCards.length}), RB(${rbCards.length}), Pkm(${pkmList.length})`);
+
+      const hydrated = minimalCards.map(skeletal => {
+        if (skeletal.hydrated) return skeletal;
+
+        let found = null;
+        const rawId = String(skeletal.id).trim();
+        // Expanded prefixes for all games
+        const cleanId = rawId.replace(/^(op-|pkm-|tcg-|rb-|riftbound-)/i, "");
+
+        if (skeletal.tcg === "OnePiece") {
+          found = opCards.find(c => 
+            String(c.id).trim().toLowerCase() === rawId.toLowerCase() ||
+            String(c.id).trim().toLowerCase() === cleanId.toLowerCase()
+          );
+          // Fallback reconstruction if name/img missing
+          if (!found && cleanId.includes("-")) {
+            found = { id: cleanId, name: `OP Card ${cleanId}`, img: `https://wsrv.nl/?url=https://en.onepiece-cardgame.com/images/cardlist/card/${cleanId}.png`, tcg: "OnePiece" };
+          }
+        } else if (skeletal.tcg === "RiftBound") {
+          found = rbCards.find(c => 
+            String(c.id).trim().toLowerCase() === rawId.toLowerCase() || 
+            String(c.id).trim().toLowerCase() === cleanId.toLowerCase()
+          );
+        } else if (skeletal.tcg === "Pokemon") {
+          const pkm = pkmList.find(p => String(p.id).trim() === cleanId || String(p.name).trim().toLowerCase() === cleanId.toLowerCase());
+          
+          if (pkm) {
+            found = {
+              id: pkm.id,
+              name: pkm.name,
+              img: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pkm.id}.png`,
+              tcg: "Pokemon"
+            };
+          } else if (cleanId.includes("-")) {
+             found = {
+               id: cleanId,
+               name: `Card ${cleanId}`,
+               img: `https://images.pokemontcg.io/${cleanId.split("-")[0]}/${cleanId.split("-")[1]}.png`,
+               tcg: "Pokemon"
+             };
+          }
+        }
+
+        if (found) {
+          return { ...found, hydrated: true, tcg: skeletal.tcg };
+        } else {
+          console.warn(`[HYDRATE] Not found: [${skeletal.tcg}] ${rawId}`);
+          return skeletal;
+        }
+      });
+
+      setCards(hydrated);
+    } catch (err) {
+      console.error("Hydration Critical Error:", err);
+    } finally {
+      setIsHydrating(false);
+    }
+  };
 
   const handleRemove = (id, tcg) => {
     if (isShared) return;
@@ -82,14 +171,22 @@ function Inventory() {
         </div>
       )}
 
-      {cards.length === 0 ? (
+      {isHydrating && (
+        <div className="text-center py-5">
+          <div className="spinner-border text-info mb-3" role="status"></div>
+          <h4>Cargando colección...</h4>
+          <p className="text-secondary">Estamos recuperando los detalles de las cartas compartidas.</p>
+        </div>
+      )}
+
+      {!isHydrating && cards.length === 0 ? (
         <div className="text-center text-secondary py-5">
           <h1>📭</h1>
           <h4>Tu inventario está vacío</h4>
           <p>Ve a las secciones de TCG y añade algunas cartas.</p>
         </div>
       ) : (
-        <div className="row g-4">
+        <div className={`row g-4 ${isHydrating ? 'opacity-25' : ''}`}>
           {cards.map((card, index) => (
             <div key={`${card.id}-${card.tcg}-${index}`} className="col-6 col-md-3 col-lg-2">
               <div className="card bg-dark border-secondary h-100 shadow position-relative">
@@ -108,15 +205,27 @@ function Inventory() {
                   </span>
                 </div>
                 
-                <img 
-                  src={card.img} 
-                  className="card-img-top p-2" 
-                  alt={card.name} 
-                  style={{ objectFit: "contain", height: "200px", backgroundColor: "#fff" }} 
-                />
+                {card.img ? (
+                  <img 
+                    src={
+                      card.tcg === "RiftBound" 
+                        ? `https://i0.wp.com/${card.img.replace(/^https?:\/\//, "")}`
+                        : card.tcg === "OnePiece"
+                          ? `https://wsrv.nl/?url=${encodeURIComponent(card.img)}`
+                          : card.img
+                    } 
+                    className="card-img-top p-2" 
+                    alt={card.name} 
+                    style={{ objectFit: "contain", height: "200px" }} 
+                  />
+                ) : (
+                  <div className="d-flex align-items-center justify-content-center bg-secondary-subtle" style={{ height: "200px" }}>
+                    <div className="spinner-border spinner-border-sm text-light"></div>
+                  </div>
+                )}
                 <div className="card-body p-2 text-center">
                   <p className="card-text small text-white text-truncate fw-bold mb-0">
-                    {card.name}
+                    {card.name || "Cargando..."}
                   </p>
                   <p className="card-text text-secondary" style={{ fontSize: "0.7rem" }}>
                     ID: {card.id}

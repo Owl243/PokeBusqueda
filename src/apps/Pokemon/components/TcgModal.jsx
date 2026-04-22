@@ -8,21 +8,35 @@ function TcgModal({ pokemon, onClose, selectedTcg, toggleSelectTcg }) {
   useEffect(() => {
     if (!pokemon) return;
 
-    const isMega = pokemon.name.startsWith("mega-") || pokemon.name.includes("-mega");
-    let baseName = pokemon.name.replace("mega-", "").replace("-mega", "").split("-")[0];
+    const name = pokemon.name;
+    const isMega   = name.startsWith("mega-") || name.includes("-mega");
+    const isGmax   = name.includes("-gmax");
+
+    // Nombre base: quitamos prefijos/sufijos de forma
+    let baseName = name
+      .replace("mega-", "").replace("-mega", "")
+      .replace("-gmax", "")
+      .split("-")[0];
 
     const fetchCards = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`https://api.pokemontcg.io/v2/cards?q=name:"${baseName}"`);
+        const res = await fetch(`https://api.pokemontcg.io/v2/cards?q=name:"${baseName}"&pageSize=200`);
         const data = await res.json();
 
         let fetchedCards = data.data || [];
 
-        if (isMega) {
+        if (isGmax) {
+          // En el TCG, las formas Gigamax se representan como VMAX
+          // Filtramos cartas cuyo nombre incluya el nombre base + "VMAX" (ej: "Charizard VMAX")
           fetchedCards = fetchedCards.filter(c => {
             const n = c.name.toLowerCase();
-            // En Pokemon TCG, las megas se llaman "M NombreEX" o "Mega Nombre"
+            return n.includes(`${baseName} vmax`) || n.includes(`vmax ${baseName}`);
+          });
+        } else if (isMega) {
+          // Las Megas en TCG se llaman "M CharizardEX", "Mega Charizard EX", etc.
+          fetchedCards = fetchedCards.filter(c => {
+            const n = c.name.toLowerCase();
             return n.includes(`m ${baseName}`) || n.includes(`mega ${baseName}`);
           });
         }

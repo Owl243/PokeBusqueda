@@ -3,7 +3,7 @@ import PokemonCard from "./PokemonCard";
 
 
 
-const PokemonGrid = memo(({ pokemons, selected, toggleSelect, typeColors, gridSize, fetchType, typesMap, onOpenTcg }) => {
+const PokemonGrid = memo(({ pokemons, selected, toggleSelect, typeColors, gridSize, fetchType, typesMap, onOpenTcg, activeTab }) => {
     return (
         <div className="row g-2 p-1">
             {pokemons.map((poke, index) => {
@@ -20,6 +20,7 @@ const PokemonGrid = memo(({ pokemons, selected, toggleSelect, typeColors, gridSi
                         typesMap={typesMap}
                         typeColors={typeColors}
                         onOpenTcg={onOpenTcg}
+                        activeTab={activeTab}
                     />
                 );
             })}

@@ -2,7 +2,8 @@ import { megaPokemon } from "../data/megas";
 import { megaZA } from "../data/megasZA";
 
 export const getPokemons = async () => {
-    const res = await fetch("https://pokeapi.co/api/v2/pokemon?limit=1025");
+    // 1300 para incluir las formas regionales, gigamax y especiales
+    const res = await fetch("https://pokeapi.co/api/v2/pokemon?limit=1300");
     const data = await res.json();
 
     const base = data.results.map((pokemon) => {

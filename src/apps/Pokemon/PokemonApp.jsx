@@ -42,8 +42,31 @@ const generations = [
   { id: 7, name: "Gen 7 (Alola)", start: 722, end: 809 },
   { id: 8, name: "Gen 8 (Galar)", start: 810, end: 905 },
   { id: 9, name: "Gen 9 (Paldea)", start: 906, end: 1025 },
-  { id: 10, name: "Todos", start: 1, end: 1025 },
+  { id: 10, name: "Todas", start: 1, end: 1025 },
 ];
+
+// Helpers para determinar el ID base de cualquier forma/variante
+const getBaseId = (poke, allPokemons) => {
+  // Megas ZA (ID > 20000) – usar Pokémon base
+  if (poke.id > 20000) {
+    const baseName = poke.name.replace("mega-", "").replace("-mega", "").split("-")[0];
+    const base = allPokemons.find(p => p.name === baseName && p.id <= 1025);
+    return base ? base.id : poke.id;
+  }
+  // Megas reales (id 10033–10090 aprox.) y otras formas (id > 10000 < 20000)
+  if (poke.id > 10000) {
+    // Extraemos el nombre base quitando sufijos regionales / especiales
+    const baseName = poke.name
+      .replace("-mega-x", "").replace("-mega-y", "").replace("-mega", "")
+      .replace("-alola", "").replace("-galar", "").replace("-hisui", "").replace("-paldea", "")
+      .replace("-gmax", "").replace("-original", "").replace("-zen", "")
+      .replace("-heat", "").replace("-wash", "").replace("-frost", "").replace("-fan", "").replace("-mow", "")
+      .split("-")[0]; // de lo que quede, toma el primer segmento
+    const base = allPokemons.find(p => p.name === baseName && p.id <= 1025);
+    return base ? base.id : poke.id;
+  }
+  return poke.id;
+};
 
 const formatName = (name) => {
   return name
@@ -61,12 +84,13 @@ function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [gridSize, setGridSize] = useState(16);
   const [isListMinimized, setIsListMinimized] = useState(false);
+  const [activeTab, setActiveTab] = useState("pokedex");
 
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   const [typesMap, setTypesMap] = useState({});
 
-  const [showMegas, setShowMegas] = useState(false);
+  const [showExtraForms, setShowExtraForms] = useState(false);
   const [selectedGen, setSelectedGen] = useState(1);
   const [tcgPokemon, setTcgPokemon] = useState(null);
 
@@ -529,55 +553,71 @@ function App() {
     }
   };
 
-  // 🔍 FILTRO (multi búsqueda)
+  // 🔍 FILTRO con agrupamiento de variantes
   const filteredPokemons = useMemo(() => {
-    let filtered = pokemons;
-
-    // Identificar el rango de la generación seleccionada
     const gen = generations.find(g => g.id === selectedGen);
 
-    // Separar lista para no mezclar normales y megas (megas tienen ID > 10000)
-    if (showMegas) {
-      filtered = filtered.filter(p => p.id > 10000);
-    } else {
-      filtered = filtered.filter(p => p.id <= 10000);
-    }
-
-    // Filtrar por generación (Solo si NO hay búsqueda activa)
-    if (gen && !search.trim()) {
-      filtered = filtered.filter(p => {
-        // Si es normal, validamos su ID directamente
-        if (p.id <= 10000) {
-          return p.id >= gen.start && p.id <= gen.end;
-        } else {
-          // Si es Mega, obtenemos el nombre base y buscamos el ID base
-          let baseName = p.name.replace("mega-", "").replace("-mega", "").split("-")[0];
-          const basePoke = pokemons.find(bp => bp.name === baseName && bp.id <= 10000);
-          if (basePoke) {
-            return basePoke.id >= gen.start && basePoke.id <= gen.end;
-          }
-          return false;
-        }
-      });
-    }
-
-    // 🔍 búsqueda
+    // 🔍 Búsqueda multi-término: muestra TODAS las formas que coincidan
     const terms = search
       .split(",")
       .map(t => t.trim().toLowerCase())
       .filter(Boolean);
 
     if (terms.length > 0) {
-      filtered = filtered.filter(p =>
+      const matched = pokemons.filter(p =>
         terms.some(term =>
           p.id.toString() === term ||
           p.name.toLowerCase().includes(term)
         )
       );
+      // Si hay búsqueda, ordenar por ID base para agrupar variantes
+      return [...matched].sort((a, b) => {
+        const baseA = getBaseId(a, pokemons);
+        const baseB = getBaseId(b, pokemons);
+        if (baseA !== baseB) return baseA - baseB;
+        // Formas base primero (id menor)
+        return a.id - b.id;
+      });
     }
 
-    return filtered;
-  }, [pokemons, showMegas, search, selectedGen]);
+    // Sin búsqueda: partimos de los Pokémon base del rango de generación
+    const genStart = gen?.start ?? 1;
+    const genEnd   = gen?.id === 10 ? 1025 : (gen?.end ?? 1025);
+
+    // Pokémon base dentro del rango
+    const basePokes = pokemons.filter(p => p.id >= genStart && p.id <= genEnd);
+
+    if (!showExtraForms) {
+      // Sin formas extras: solo los base, ordenados por ID
+      return basePokes;
+    }
+
+    // Con formas extras: para cada base, adjuntamos sus variantes agrupadas
+    const result = [];
+    for (const base of basePokes) {
+      result.push(base);
+      // Variantes: formas con id > 10000 cuyo nombre base coincide con este Pokémon
+      const variants = pokemons.filter(p => {
+        if (p.id <= 10000 || p.id === base.id) return false;
+        return getBaseId(p, pokemons) === base.id;
+      });
+      // Ordenamos variantes: primero por tipo de forma (mega, alola, galar, hisui, gmax, otras)
+      variants.sort((a, b) => {
+        const order = (n) => {
+          if (n.includes("mega")) return 1;
+          if (n.includes("-alola")) return 2;
+          if (n.includes("-galar")) return 3;
+          if (n.includes("-hisui")) return 4;
+          if (n.includes("-paldea")) return 5;
+          if (n.includes("-gmax")) return 6;
+          return 7;
+        };
+        return order(a.name) - order(b.name);
+      });
+      result.push(...variants);
+    }
+    return result;
+  }, [pokemons, showExtraForms, search, selectedGen]);
 
   // 📖 PAGINACIÓN TIPO LIBRO
   const { totalPages, leftPagePokemons, rightPagePokemons } = useMemo(() => {
@@ -612,26 +652,56 @@ function App() {
       </div>
 
       {/* 🧠 Header */}
-      <div className="text-center my-4 mb-5">
+      <div className="text-center my-4 mb-2">
         <h1 className="display-4 fw-bold text-warning mb-3" style={{ textShadow: "2px 2px 4px rgba(0,0,0,0.8)" }}>
           🌟 Poké Búsqueda
         </h1>
-        <p className="lead text-light mb-4" style={{ maxWidth: "750px", margin: "0 auto" }}>
-          Busca, filtra y selecciona tus Pokémon favoritos de diversas generaciones.
-          Incluye soporte para Mega Evoluciones y su integración directa con Cartas TCG.
-          Configura ambas listas a tu gusto y expórtalas rápidamente a documentos PDF de alta calidad listos para imprimir.
-        </p>
+
+        {/* 📑 TABS NAVIGATION */}
+        <div className="d-flex justify-content-center mb-4 mt-4">
+          <ul className="nav nav-pills justify-content-center bg-dark p-2 rounded-pill shadow-sm border border-secondary" style={{ maxWidth: "450px", width: "100%" }}>
+            <li className="nav-item flex-fill text-center">
+              <button 
+                className={`nav-link fw-bold rounded-pill w-100 ${activeTab === 'pokedex' ? 'active bg-warning text-dark' : 'text-light'}`}
+                onClick={() => setActiveTab('pokedex')}
+              >
+                📕 Pokédex
+              </button>
+            </li>
+            <li className="nav-item flex-fill text-center">
+              <button 
+                className={`nav-link fw-bold rounded-pill w-100 ${activeTab === 'tcg' ? 'active bg-primary text-white' : 'text-light'}`}
+                onClick={() => setActiveTab('tcg')}
+              >
+                🎴 Cartas TCG
+              </button>
+            </li>
+          </ul>
+        </div>
 
         {/* 📚 Instrucciones Rápidas */}
-        <div className="alert alert-dark border-secondary mt-4 mx-auto text-start shadow-sm" style={{ maxWidth: "750px" }}>
+        <div className="alert alert-dark border-secondary mt-0 mx-auto text-start shadow-sm" style={{ maxWidth: "750px" }}>
           <h6 className="alert-heading text-warning fw-bold mb-2">💡 ¿Cómo se usa?</h6>
           <ul className="mb-0 text-light" style={{ fontSize: "0.9rem" }}>
-            <li className="mb-1">
-              <strong>PDF de Pokédex:</strong> Haz clic sobre cualquier recuadro de Pokémon para seleccionarlo (aparecerá un borde blanco). Estos se guardarán en tu Panel Flotante inferior para exportar tu Lista Principal.
-            </li>
-            <li>
-              <strong>PDF de Cartas TCG:</strong> Haz clic en el botón 🎴 (en la esquina de cada carta) para ver las cartas físicas de ese Pokémon. Clica tus favoritas y expórtalas en su propio PDF en cuadrículas de 16 por hoja.
-            </li>
+            {activeTab === 'pokedex' ? (
+                <>
+                    <li className="mb-1">
+                    <strong>Generar tu Pokédex:</strong> Estás en modo Pokédex. Selecciona un Pokémon para añadirlo a tu lista principal.
+                    </li>
+                    <li>
+                    Usa los filtros de generación o busca variantes específicas (como Alola, Galar o Gigamax) y luego genera un PDF con tu colección.
+                    </li>
+                </>
+            ) : (
+                <>
+                    <li className="mb-1">
+                    <strong>Añadir cartas TCG:</strong> Estás en modo TCG. Al hacer clic en un Pokémon irás directamente a buscar qué cartas físicas tiene en el universo TCG.
+                    </li>
+                    <li>
+                    Clica tus favoritas de cada Pokémon y expórtalas a tu inventario o expórtalas en un PDF estilo póster con 16 por hoja.
+                    </li>
+                </>
+            )}
           </ul>
         </div>
       </div>
@@ -664,15 +734,24 @@ function App() {
           ))}
         </select>
 
-        <button
-          className={showMegas ? "btn btn-warning" : "btn btn-outline-warning"}
-          onClick={() => {
-            setShowMegas(!showMegas);
-            setCurrentPage(1);
-          }}
-        >
-          {showMegas ? "Ver Normales" : "Ver Megas"}
-        </button>
+        {/* ✨ Checkbox Ver Formas Extras */}
+        <div className="form-check form-switch d-flex align-items-center gap-2 m-0">
+          <input
+            className="form-check-input"
+            type="checkbox"
+            id="showExtraFormsCheck"
+            role="switch"
+            checked={showExtraForms}
+            onChange={(e) => {
+              setShowExtraForms(e.target.checked);
+              setCurrentPage(1);
+            }}
+            style={{ width: "2.5em", height: "1.3em", cursor: "pointer" }}
+          />
+          <label className="form-check-label text-light fw-semibold" htmlFor="showExtraFormsCheck" style={{ cursor: "pointer" }}>
+            ✨ Formas extras
+          </label>
+        </div>
 
         <div className="ms-auto">
           <button
@@ -701,26 +780,40 @@ function App() {
         <div className="col-12 col-xl-6 mb-0 pe-xl-4 border-xl-end">
           <PokemonGrid
             pokemons={leftPagePokemons}
-            selected={selected}
-            toggleSelect={toggleSelect}
+            selected={activeTab === 'tcg' ? [] : selected}
+            toggleSelect={(poke) => {
+                if (activeTab === 'tcg') {
+                    setTcgPokemon(poke);
+                } else {
+                    toggleSelect(poke);
+                }
+            }}
             typeColors={typeColors}
             gridSize={gridSize}
             fetchType={fetchType}
             typesMap={typesMap}
             onOpenTcg={setTcgPokemon}
+            activeTab={activeTab}
           />
         </div>
 
         <div className="col-12 col-xl-6 mb-4 ps-xl-4">
           <PokemonGrid
             pokemons={rightPagePokemons}
-            selected={selected}
-            toggleSelect={toggleSelect}
+            selected={activeTab === 'tcg' ? [] : selected}
+            toggleSelect={(poke) => {
+                if (activeTab === 'tcg') {
+                    setTcgPokemon(poke);
+                } else {
+                    toggleSelect(poke);
+                }
+            }}
             typeColors={typeColors}
             gridSize={gridSize}
             fetchType={fetchType}
             typesMap={typesMap}
             onOpenTcg={setTcgPokemon}
+            activeTab={activeTab}
           />
         </div>
       </div>
@@ -744,6 +837,7 @@ function App() {
         onSaveTcgInventory={handleSaveTcgInventory}
         isListMinimized={isListMinimized}
         setIsListMinimized={setIsListMinimized}
+        activeTab={activeTab}
       />
 
       {isGeneratingPDF && (

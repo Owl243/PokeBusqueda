@@ -1,6 +1,6 @@
 import { useEffect, useState, memo } from "react";
 
-const PokemonCard = memo(({ poke, isSelected, toggleSelect, gridSize, fetchType, typesMap, typeColors, onOpenTcg }) => {
+const PokemonCard = memo(({ poke, isSelected, toggleSelect, gridSize, fetchType, typesMap, typeColors, onOpenTcg, activeTab }) => {
     const colClass = gridSize === 9 ? "col-4" : "col-3";
 
     const [imgUrl, setImgUrl] = useState(`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${poke.id}.png`);
@@ -50,18 +50,20 @@ const PokemonCard = memo(({ poke, isSelected, toggleSelect, gridSize, fetchType,
                     #{poke.id}
                 </span>
 
-                <button
-                    type="button"
-                    className="btn btn-sm btn-dark p-0 d-flex justify-content-center align-items-center bg-dark bg-opacity-50 border-0"
-                    style={{ position: "absolute", top: "5px", right: "8px", width: "24px", height: "24px", fontSize: "0.80rem", zIndex: 10 }}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        if (onOpenTcg) onOpenTcg(poke);
-                    }}
-                    title="Ver cartas TCG"
-                >
-                    🎴
-                </button>
+                {activeTab !== 'pokedex' && (
+                    <button
+                        type="button"
+                        className="btn btn-sm btn-dark p-0 d-flex justify-content-center align-items-center bg-dark bg-opacity-50 border-0"
+                        style={{ position: "absolute", top: "5px", right: "8px", width: "24px", height: "24px", fontSize: "0.80rem", zIndex: 10 }}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (onOpenTcg) onOpenTcg(poke);
+                        }}
+                        title="Ver cartas TCG"
+                    >
+                        🎴
+                    </button>
+                )}
 
                 <img
                     src={imgUrl}

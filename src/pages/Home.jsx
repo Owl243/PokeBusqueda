@@ -122,12 +122,7 @@ function Home() {
            </div>
         </div>
 
-        {/* Footer Credit */}
-        <div className="text-center py-4 mt-5 border-top border-secondary border-opacity-10">
-          <p className="text-muted mb-0" style={{ fontSize: "0.65rem" }}>
-            &copy; 2026 MultiTCG System — Hecho por <span className="text-info">Vaiu</span>
-          </p>
-        </div>
+
 
       </div>
 

@@ -10,6 +10,7 @@ import PokemonGrid from "./components/PokemonGrid";
 import Pagination from "../../components/Pagination";
 import SelectedPanel from "./components/SelectedPanel";
 import TcgModal from "./components/TcgModal";
+import ArtistGallery from "./components/ArtistGallery";
 
 const typeColors = {
   fire: "#f08030",
@@ -247,6 +248,16 @@ function App() {
           }
         }
       }
+
+      // 🏷️ Footer en todas las páginas
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let p = 1; p <= pageCount; p++) {
+        doc.setPage(p);
+        doc.setFontSize(7);
+        doc.setTextColor(150);
+        doc.text("Archivo generado en: https://multi-tcg-docs.vercel.app/", 105, 293, { align: "center" });
+      }
+
       doc.save("pokemon-cards.pdf");
 
       // 🧹 limpiar selección
@@ -537,6 +548,13 @@ function App() {
         ctx.textAlign = "left";
       }
 
+      // 🏷️ Footer
+      ctx.font = "bold 12px sans-serif";
+      ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+      ctx.textAlign = "center";
+      ctx.fillText("Archivo generado en: https://multi-tcg-docs.vercel.app/", canvas.width / 2, canvas.height - 8);
+      ctx.textAlign = "left";
+
       const link = document.createElement('a');
       link.download = 'pokemon-tcg-collection.png';
       link.href = canvas.toDataURL('image/png');
@@ -620,7 +638,7 @@ function App() {
   }, [pokemons, showExtraForms, search, selectedGen]);
 
   // 📖 PAGINACIÓN TIPO LIBRO
-  const { totalPages, leftPagePokemons, rightPagePokemons } = useMemo(() => {
+  const { totalPages, leftPagePokemons, rightPagePokemons, currentPagePokemons } = useMemo(() => {
     const itemsPerPage = gridSize * 2;
     const total = Math.ceil(filteredPokemons.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -632,9 +650,27 @@ function App() {
     return {
       totalPages: total,
       leftPagePokemons: currentSpread.slice(0, gridSize),
-      rightPagePokemons: currentSpread.slice(gridSize, itemsPerPage)
+      rightPagePokemons: currentSpread.slice(gridSize, itemsPerPage),
+      currentPagePokemons: currentSpread,
     };
   }, [filteredPokemons, currentPage, gridSize]);
+
+  // ✅ Seleccionar todo de la página actual
+  const allPageSelected = currentPagePokemons.length > 0 &&
+    currentPagePokemons.every(p => selected.some(s => s.name === p.name));
+
+  const toggleSelectAllPage = useCallback(() => {
+    if (allPageSelected) {
+      // Deseleccionar todos de esta página
+      setSelected(prev => prev.filter(s => !currentPagePokemons.some(p => p.name === s.name)));
+    } else {
+      // Añadir los que faltan
+      setSelected(prev => {
+        const nuevos = currentPagePokemons.filter(p => !prev.some(s => s.name === p.name));
+        return [...prev, ...nuevos];
+      });
+    }
+  }, [allPageSelected, currentPagePokemons]);
 
   // ⏳ Loading simple
   if (!pokemons.length) {
@@ -659,9 +695,9 @@ function App() {
 
         {/* 📑 TABS NAVIGATION */}
         <div className="d-flex justify-content-center mb-4 mt-4">
-          <ul className="nav nav-pills justify-content-center bg-dark p-2 rounded-pill shadow-sm border border-secondary" style={{ maxWidth: "450px", width: "100%" }}>
+          <ul className="nav nav-pills justify-content-center bg-dark p-2 rounded-pill shadow-sm border border-secondary" style={{ maxWidth: "640px", width: "100%" }}>
             <li className="nav-item flex-fill text-center">
-              <button 
+              <button
                 className={`nav-link fw-bold rounded-pill w-100 ${activeTab === 'pokedex' ? 'active bg-warning text-dark' : 'text-light'}`}
                 onClick={() => setActiveTab('pokedex')}
               >
@@ -669,45 +705,65 @@ function App() {
               </button>
             </li>
             <li className="nav-item flex-fill text-center">
-              <button 
+              <button
                 className={`nav-link fw-bold rounded-pill w-100 ${activeTab === 'tcg' ? 'active bg-primary text-white' : 'text-light'}`}
                 onClick={() => setActiveTab('tcg')}
               >
                 🎴 Cartas TCG
               </button>
             </li>
+            <li className="nav-item flex-fill text-center">
+              <button
+                className={`nav-link fw-bold rounded-pill w-100 ${activeTab === 'artists' ? 'active text-dark' : 'text-light'}`}
+                style={activeTab === 'artists' ? { background: "linear-gradient(135deg,#a890f0,#7038f8)" } : {}}
+                onClick={() => setActiveTab('artists')}
+              >
+                🎨 Artistas TCG
+              </button>
+            </li>
           </ul>
         </div>
 
-        {/* 📚 Instrucciones Rápidas */}
-        <div className="alert alert-dark border-secondary mt-0 mx-auto text-start shadow-sm" style={{ maxWidth: "750px" }}>
-          <h6 className="alert-heading text-warning fw-bold mb-2">💡 ¿Cómo se usa?</h6>
-          <ul className="mb-0 text-light" style={{ fontSize: "0.9rem" }}>
-            {activeTab === 'pokedex' ? (
+        {/* 📚 Instrucciones Rápidas (ocultas en artistas) */}
+        {activeTab !== 'artists' && (
+          <div className="alert alert-dark border-secondary mt-0 mx-auto text-start shadow-sm" style={{ maxWidth: "750px" }}>
+            <h6 className="alert-heading text-warning fw-bold mb-2">💡 ¿Cómo se usa?</h6>
+            <ul className="mb-0 text-light" style={{ fontSize: "0.9rem" }}>
+              {activeTab === 'pokedex' ? (
                 <>
-                    <li className="mb-1">
+                  <li className="mb-1">
                     <strong>Generar tu Pokédex:</strong> Estás en modo Pokédex. Selecciona un Pokémon para añadirlo a tu lista principal.
-                    </li>
-                    <li>
+                  </li>
+                  <li>
                     Usa los filtros de generación o busca variantes específicas (como Alola, Galar o Gigamax) y luego genera un PDF con tu colección.
-                    </li>
+                  </li>
                 </>
-            ) : (
+              ) : (
                 <>
-                    <li className="mb-1">
+                  <li className="mb-1">
                     <strong>Añadir cartas TCG:</strong> Estás en modo TCG. Al hacer clic en un Pokémon irás directamente a buscar qué cartas físicas tiene en el universo TCG.
-                    </li>
-                    <li>
+                  </li>
+                  <li>
                     Clica tus favoritas de cada Pokémon y expórtalas a tu inventario o expórtalas en un PDF estilo póster con 16 por hoja.
-                    </li>
+                  </li>
                 </>
-            )}
-          </ul>
-        </div>
+              )}
+            </ul>
+          </div>
+        )}
       </div>
 
 
-      {/* 🔍 Buscador */}
+      {/* 🎨 ARTISTAS TAB */}
+      {activeTab === 'artists' && (
+        <ArtistGallery
+          selectedTcg={selectedTcg}
+          toggleSelectTcg={toggleSelectTcg}
+        />
+      )}
+
+      {/* 🔍 Buscador (oculto en artistas) */}
+      {activeTab !== 'artists' && (
       <input
         type="text"
         className="form-control mb-3"
@@ -719,8 +775,10 @@ function App() {
         }}
       />
 
-      {/* 🎛️ Grid selector y Generación */}
-      <div className="mb-3 d-flex flex-wrap gap-2 align-items-center">
+      )}
+
+      {/* 🎛️ Grid selector y Generación (oculto en artistas) */}
+      {activeTab !== 'artists' && <div className="mb-3 d-flex flex-wrap gap-2 align-items-center">
         <select
           className="form-select w-auto d-inline-block bg-dark text-light border-secondary"
           value={selectedGen}
@@ -773,10 +831,46 @@ function App() {
             4x4
           </button>
         </div>
-      </div>
+      </div>}
 
-      {/* 📖 GRID TIPO LIBRO */}
-      <div className="row mt-0 mb-0">
+      {/* ✅ Seleccionar toda la página (solo Pokédex) */}
+      {activeTab === 'pokedex' && currentPagePokemons.length > 0 && (
+        <div className="d-flex align-items-center gap-2 mb-3 px-1">
+          <div
+            className="form-check form-switch d-flex align-items-center gap-2 m-0"
+            style={{ cursor: "pointer" }}
+            onClick={toggleSelectAllPage}
+          >
+            <input
+              className="form-check-input"
+              type="checkbox"
+              id="selectAllPageCheck"
+              role="switch"
+              readOnly
+              checked={allPageSelected}
+              style={{ width: "2.5em", height: "1.3em", cursor: "pointer", pointerEvents: "none" }}
+            />
+            <label
+              className="form-check-label fw-semibold"
+              htmlFor="selectAllPageCheck"
+              style={{
+                cursor: "pointer",
+                color: allPageSelected ? "#ffc107" : "#adb5bd",
+                transition: "color 0.2s",
+                pointerEvents: "none"
+              }}
+            >
+              {allPageSelected ? "✅ Todo seleccionado" : "Seleccionar todo"}
+            </label>
+          </div>
+          <span className="badge bg-secondary ms-1" style={{ fontSize: "0.8rem" }}>
+            {currentPagePokemons.filter(p => selected.some(s => s.name === p.name)).length} / {currentPagePokemons.length}
+          </span>
+        </div>
+      )}
+
+      {/* 📖 GRID TIPO LIBRO (oculto en artistas) */}
+      {activeTab !== 'artists' && <div className="row mt-0 mb-0">
         <div className="col-12 col-xl-6 mb-0 pe-xl-4 border-xl-end">
           <PokemonGrid
             pokemons={leftPagePokemons}
@@ -816,13 +910,15 @@ function App() {
             activeTab={activeTab}
           />
         </div>
-      </div>
-      {/* 📄 Paginación */}
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        setCurrentPage={setCurrentPage}
-      />
+      </div>}
+      {/* 📄 Paginación (oculta en artistas) */}
+      {activeTab !== 'artists' && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          setCurrentPage={setCurrentPage}
+        />
+      )}
 
       {/* 📦 Panel flotante */}
       <SelectedPanel
@@ -837,7 +933,7 @@ function App() {
         onSaveTcgInventory={handleSaveTcgInventory}
         isListMinimized={isListMinimized}
         setIsListMinimized={setIsListMinimized}
-        activeTab={activeTab}
+        activeTab={activeTab === 'artists' ? 'tcg' : activeTab}
       />
 
       {isGeneratingPDF && (
